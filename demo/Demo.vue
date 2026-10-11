@@ -157,10 +157,13 @@ onBeforeUnmount(() => window.removeEventListener('resize', placeRightLabel))
         Maecenas
         faucibus mollis interdum, sed posuere consectetur est at lobortis.
       </p>      
+      <PointingBubble style="position: absolute; left: 50%; bottom: 100px; transform: translateX(-50%);">An absolutely positioned bubble</PointingBubble>
       <p>
         Cras mattis consectetur purus sit amet fermentum. Vestibulum id ligula porta felis euismod
         semper. Aenean lacinia bibendum nulla sed consectetur.
-      </p>
+      </p>DOM Path: div#app > div.page > section.demo[0] > div.vue-pointing-bubble[1] > svg
+Position: top=40px, left=21px, width=614px, height=532px
+HTML Element: <svg class="vue-pointing-bubble__svg" style="position: absolute; inset: 0px; width: 100%; height: 100%; overflow: visible; z-index: auto;" data-cursor-element-id="cursor-el-5"></svg> 
       <div class="row">
         <button
           v-for="action in actions"
@@ -181,7 +184,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', placeRightLabel))
         placement="manual"
         style="
           right: 28px;
-          top: 18px;
+          top: -56px;
           padding: 10px;
           border: 1.5px solid #ca8a04;
           border-radius: 12px;

@@ -15,7 +15,8 @@ const readBubble = (root) =>
       const r = e.getBoundingClientRect()
       return { left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height }
     }
-    const box = el.querySelector('.vue-pointing-bubble__inner')
+    // Without a target the root is the box itself.
+    const box = el.matches('.vue-pointing-bubble__inner') ? el : el.querySelector('.vue-pointing-bubble__inner')
     const svg = el.querySelector('.vue-pointing-bubble__svg')
     const paths = svg ? [...svg.querySelectorAll('path')] : []
     const path = paths[0]
@@ -135,12 +136,12 @@ test.describe('with reduced motion', () => {
     expect(b.boxBackground).toBe('rgb(255, 255, 255)')
     expect(b.boxRadius).toBe('8px')
     expect(b.boxBorderWidth).toBeGreaterThan(0)
-    // Shrinks to its content inside the full-width root, without the 280px cap of bubbles with a tail.
-    expect(b.box.width).toBeLessThan(b.root.width)
+    // The root is the box: shrunk to its content, without the 280px cap of bubbles with a tail.
+    expect(b.box).toEqual(b.root)
     expect(b.box.width).toBeGreaterThan(280)
-    near(b.box.left, b.root.left, 'box left')
+    expect(b.box.width).toBeLessThan((await rectOf(section(page, 0))).width)
 
-    // Opacity and transforms on the root, such as Slidev's v-click, apply to the box too.
+    // Opacity and transforms on the root, such as Slidev's v-click, apply to the bubble directly.
     await root.evaluate((el) => {
       el.style.opacity = '0'
       el.style.translate = '0 20px'
@@ -148,6 +149,28 @@ test.describe('with reduced motion', () => {
     const moved = await readBubble(root)
     near(moved.box.top, b.box.top + 20, 'translated box top')
     await expect(root).toHaveCSS('opacity', '0')
+  })
+
+  test('a bubble without a target can be positioned by its own CSS', async ({ page }) => {
+    const s = section(page, 0)
+    const root = bubble(s, 'An absolutely positioned bubble')
+    const b = await readBubble(root)
+    const sectionRect = await rectOf(s)
+
+    expect(b.placement).toBe('none')
+    expect(b.hasSvg).toBe(false)
+    // No full-size wrapper: the root is the box, placed by the style on the component.
+    expect(b.box).toEqual(b.root)
+    expect(b.rootPosition).toBe('absolute')
+    near(center(b.box).x, center(sectionRect).x, 'centered by left: 50% and translateX(-50%)')
+    near(sectionRect.bottom - b.box.bottom, 100, 'bottom: 100px')
+
+    // A translate on the root, such as Slidev's v-click, shifts the bubble without changing
+    // what it is positioned against.
+    await root.evaluate((el) => (el.style.translate = '0 20px'))
+    const moved = await readBubble(root)
+    near(moved.box.top, b.box.top + 20, 'translated box top')
+    near(moved.box.left, b.box.left, 'translated box left')
   })
 
   test('hover hints point at the nearest edge or the center of the button', async ({ page }) => {
@@ -223,7 +246,8 @@ test.describe('with reduced motion', () => {
     const paragraph = s.locator(':scope > p:not(.hint)').first()
     const paragraphTop = await topIn(paragraph, s)
     const root = s.locator('.vue-pointing-bubble')
-    const box = root.locator('.vue-pointing-bubble__inner')
+    // The root itself on the intro step, an element inside it with a target.
+    const box = s.locator('.vue-pointing-bubble__inner')
 
     await s.getByRole('button', { name: 'Start tour' }).click()
     const intro = await readBubble(root)

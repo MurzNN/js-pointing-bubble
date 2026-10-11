@@ -282,16 +282,16 @@ of its classes or style, such as during a CSS transition, call `update()`.
 ### A box without a tail
 
 Leave out `target`, or set it to `null`, to draw just the box, with no tail. The
-box is then a regular element in the normal document flow: it isn't absolutely
-positioned and doesn't need a positioned parent. It sits on its own line inside
-the component's root block and is as wide as its content, up to the parent's
-width. The 280px default `maxWidth` doesn't apply here, but an explicit
-`:max-width`, or a width or max-width from your CSS, does. Margins on the box work as usual, for example `mx-auto` to
-center it. Opacity and transforms set on the component's root element, such as
-by Slidev's `v-click`, apply to the box as well. In a flex or grid parent, the
-root is the flex or grid item, so put item classes like `flex-1` on a wrapper
-element. This is handy for a step that doesn't point at anything, such as the
-welcome step of a guided tour:
+component then renders the box as a single regular element, with no overlay or
+SVG around it. It's in the normal document flow and doesn't need a positioned
+parent. It's as wide as its content, up to the parent's width. The 280px default
+`maxWidth` doesn't apply here, but an explicit `:max-width`, or a width or
+max-width from your CSS, does. Everything else works as on any element: margins
+such as `mx-auto`, flex or grid item classes such as `flex-1`, and your own
+positioning, for example `class="absolute bottom-24 left-1/2 -translate-x-1/2"`.
+Opacity and transforms that a tool applies to the component's root element, such
+as Slidev's `v-click`, apply directly to the box. This is handy for a step that
+doesn't point at anything, such as the welcome step of a guided tour:
 
 ```vue
 <PointingBubble :target="step.element" class="mt-4">
@@ -380,8 +380,8 @@ import PointingBubble from 'vue-pointing-bubble/PointingBubble.vue'
 
 The overlay elements have stable class names you can target from your own CSS:
 
-- `.vue-pointing-bubble`: the root element, with a `data-placement` attribute holding the resolved quadrant. With a `target`, it's the full-size overlay; without one, it's a plain block around the box, with `data-placement="none"`.
-- `.vue-pointing-bubble__inner`: the box with the slot content. It receives the `class`, `style`, and listeners from `<PointingBubble>`.
+- `.vue-pointing-bubble`: the root element, with a `data-placement` attribute holding the resolved quadrant. With a `target`, it's the full-size overlay; without one, it's the box itself, with `data-placement="none"`.
+- `.vue-pointing-bubble__inner`: the box with the slot content. It receives the `class`, `style`, and listeners from `<PointingBubble>`. Without a `target`, that's the root element.
 - `.vue-pointing-bubble__svg`: the SVG layer with the tail. It isn't rendered without a `target`.
 - `.vue-pointing-bubble__path`: the tail path.
 

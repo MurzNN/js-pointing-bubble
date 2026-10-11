@@ -82,10 +82,6 @@ const box = ref(null)
 // Viewport origin, local size, cumulative scale, and the viewport size.
 const frameRect = ref({ left: 0, top: 0, width: 0, height: 0, scaleX: 1, scaleY: 1, viewportWidth: 0, viewportHeight: 0 })
 const manual = computed(() => props.placement === 'manual')
-// The box is position:absolute/fixed via the user's class. The root must then be
-// the containing block for the whole v-click animation: its `translate` would
-// otherwise become the containing block only while the transition runs.
-const boxOutOfFlow = ref(false)
 
 const sameKeys = (a, b) => !!a && !!b && Object.keys(a).every((k) => a[k] === b[k])
 
@@ -164,18 +160,8 @@ const measure = () => {
   if (!sameKeys(next, box.value)) box.value = next
 }
 
-const syncBoxFlow = () => {
-  const el = boxRef.value
-  if (!el) return
-  const position = getComputedStyle(el).position
-  boxOutOfFlow.value = position === 'absolute' || position === 'fixed'
-}
-
 // Catches changes of the component's class/style, which are not reactive in the script.
-onUpdated(() => {
-  syncBoxFlow()
-  measure()
-})
+onUpdated(measure)
 
 // Where the bubble should end up for the current tip, box size, and props.
 const geometry = computed(() => {
@@ -281,7 +267,6 @@ onMounted(() => {
     resizeObserver.observe(rootRef.value)
     resizeObserver.observe(boxRef.value)
   }
-  syncBoxFlow()
   update()
 })
 
@@ -359,14 +344,8 @@ const tail = computed(() => {
 
 const placement = computed(() => (props.target ? current.value?.placement : 'none'))
 
-// Without a target the root is a plain block around the box, so opacity or transforms set on it apply to the box too.
-// An out-of-flow box is the exception: the root fills the positioned ancestor and stays the
-// containing block, so a temporary translate (Slidev's v-click) only shifts the box.
-const rootStyle = computed(() => {
-  if (!props.target) {
-    if (!boxOutOfFlow.value) return {}
-    return { position: 'absolute', inset: 0, pointerEvents: 'none' }
-  }
+// The full-size overlay that the box and the tail are positioned in; only used with a target.
+const overlayStyle = computed(() => {
   const z = box.value?.zIndex
   return {
     position: 'absolute',
@@ -401,8 +380,24 @@ defineExpose({ update })
 </script>
 
 <template>
-  <div ref="rootRef" class="vue-pointing-bubble" :data-placement="placement" :style="rootStyle">
-    <div ref="boxRef" class="vue-pointing-bubble__inner" v-bind="$attrs" :style="boxStyle">
+  <!--
+    Without a target the root is the box itself: it takes the class, style, and listeners, so it is
+    exactly the size of the bubble, and opacity or transforms set on the component apply to it directly.
+    The inner element then generates no box of its own.
+  -->
+  <div
+    ref="rootRef"
+    :class="['vue-pointing-bubble', { 'vue-pointing-bubble__inner': !target }]"
+    :data-placement="placement"
+    v-bind="target ? {} : $attrs"
+    :style="target ? overlayStyle : boxStyle"
+  >
+    <div
+      ref="boxRef"
+      :class="{ 'vue-pointing-bubble__inner': target }"
+      v-bind="target ? $attrs : {}"
+      :style="target ? boxStyle : { display: 'contents' }"
+    >
       <slot :placement="placement" :tip="geometry ? { x: geometry.tx, y: geometry.ty } : tip">
         <p :style="{ margin: 0, fontSize: '14px', fontWeight: 600, color: '#1e293b' }">Callout content</p>
       </slot>
