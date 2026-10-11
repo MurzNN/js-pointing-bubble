@@ -104,13 +104,17 @@ const update = () => {
   const rootRect = root.getBoundingClientRect()
   // getBoundingClientRect is in viewport pixels, after ancestor transforms such as
   // Slidev's scale(). left/top and the SVG path are in the root's local CSS pixels.
-  const scaleX = root.offsetWidth ? rootRect.width / root.offsetWidth : 1
-  const scaleY = root.offsetHeight ? rootRect.height / root.offsetHeight : 1
+  // The computed size keeps fractions that offsetWidth/offsetHeight round away.
+  const rootStyle = getComputedStyle(root)
+  const width = parseFloat(rootStyle.width) || 0
+  const height = parseFloat(rootStyle.height) || 0
+  const scaleX = width ? rootRect.width / width : 1
+  const scaleY = height ? rootRect.height / height : 1
   frameRect.value = {
     left: rootRect.left,
     top: rootRect.top,
-    width: root.offsetWidth,
-    height: root.offsetHeight,
+    width,
+    height,
     scaleX,
     scaleY,
     viewportWidth: window.innerWidth,
@@ -145,12 +149,17 @@ const measure = () => {
   const el = boxRef.value
   if (!el || !props.target) return
   const s = getComputedStyle(el)
+  // offsetLeft/offsetWidth round to whole pixels, which shows as a step where a thick border
+  // meets the tail, so the box is measured from its rect, converted to the root's local pixels.
+  const { scaleX, scaleY } = frameRect.value
+  const r = el.getBoundingClientRect()
+  const rootRect = rootRef.value.getBoundingClientRect()
   const next = {
     // The position only matters in manual mode, where CSS places the box.
-    x: manual.value ? el.offsetLeft : 0,
-    y: manual.value ? el.offsetTop : 0,
-    width: el.offsetWidth,
-    height: el.offsetHeight,
+    x: manual.value ? (r.left - rootRect.left) / scaleX : 0,
+    y: manual.value ? (r.top - rootRect.top) / scaleY : 0,
+    width: r.width / scaleX,
+    height: r.height / scaleY,
     fill: s.backgroundColor,
     stroke: s.borderTopColor,
     strokeWidth: parseFloat(s.borderTopWidth) || 0,
@@ -280,8 +289,6 @@ onBeforeUnmount(() => {
 // The tail: a triangle from the box wall facing the tip.
 // The fill runs a pixel past the inner edge of the border, so it covers the border where the
 // tail attaches even when page zoom snaps that edge to a different pixel.
-// An SVG stroke is centered on its path, so the outline is drawn along the middle of the border;
-// if it followed the fill, half of the border width would land inside the bubble.
 const tail = computed(() => {
   const c = current.value
   if (!c) return null
@@ -312,33 +319,43 @@ const tail = computed(() => {
     along = by + h * (vertical === 'top' ? 0.65 : 0.35)
   }
 
-  const point = (x, y) => `${x} ${y}`
-  const triangle = (base1, base2) => `M ${point(...base1)} L ${tx} ${ty} L ${point(...base2)}`
-  // Center of the border. A stroke of width bw centered here stays within the border.
-  const mid = bw / 2
   // One pixel past the inner edge. The fill matches the background, so this overlap is
   // invisible, but it covers the border when page zoom snaps that edge off the path.
   const cover = 1
-
-  if (side === 'left' || side === 'right') {
-    const a = clamp(along, by + r + half, by + h - r - half)
-    const y1 = a - half
-    const y2 = a + half
-    const fillX = side === 'left' ? bx + bw + cover : bx + w - bw - cover
-    const strokeX = side === 'left' ? bx + mid : bx + w - mid
-    return {
-      fill: triangle([fillX, y1], [fillX, y2]),
-      stroke: bw ? triangle([strokeX, y1], [strokeX, y2]) : null
-    }
+  const horizontalWall = side === 'top' || side === 'bottom'
+  // A point `along` the wall and `depth` px outwards from its outer edge (negative is inside the box).
+  const at = {
+    left: (a, depth) => [bx - depth, a],
+    right: (a, depth) => [bx + w + depth, a],
+    top: (a, depth) => [a, by - depth],
+    bottom: (a, depth) => [a, by + h + depth]
+  }[side]
+  const tipDepth = { left: bx - tx, right: tx - bx - w, top: by - ty, bottom: ty - by - h }[side]
+  // The stroke is centered on the path, so it spans bw / 2 on each side of the base points.
+  const a = horizontalWall
+    ? clamp(along, bx + r + half + bw / 2, bx + w - r - half - bw / 2)
+    : clamp(along, by + r + half + bw / 2, by + h - r - half - bw / 2)
+  // Each side of the tail leaves the wall at a right angle, so its butt cap lies flat on the
+  // border's inner edge, then bends over `bend` px into the straight line to the tip.
+  const bend = Math.max(0, Math.min(bw, tipDepth / 2))
+  const point = ([x, y]) => `${x} ${y}`
+  const edge = (base, innerDepth) => {
+    const ctrl = at(base, bend)
+    const dist = Math.hypot(tx - ctrl[0], ty - ctrl[1]) || 1
+    const end = [ctrl[0] + ((tx - ctrl[0]) * bend) / dist, ctrl[1] + ((ty - ctrl[1]) * bend) / dist]
+    return { inner: point(at(base, innerDepth)), outer: point(at(base, 0)), ctrl: point(ctrl), end: point(end) }
   }
-  const a = clamp(along, bx + r + half, bx + w - r - half)
-  const x1 = a - half
-  const x2 = a + half
-  const fillY = side === 'top' ? by + bw + cover : by + h - bw - cover
-  const strokeY = side === 'top' ? by + mid : by + h - mid
+  const tail = (innerDepth) => {
+    const s1 = edge(a - half, innerDepth)
+    const s2 = edge(a + half, innerDepth)
+    return (
+      `M ${s1.inner} L ${s1.outer} Q ${s1.ctrl} ${s1.end} L ${tx} ${ty} ` +
+      `L ${s2.end} Q ${s2.ctrl} ${s2.outer} L ${s2.inner}`
+    )
+  }
   return {
-    fill: triangle([x1, fillY], [x2, fillY]),
-    stroke: bw ? triangle([x1, strokeY], [x2, strokeY]) : null
+    fill: tail(-bw - cover) + ' Z',
+    stroke: bw ? tail(-bw) : null
   }
 })
 

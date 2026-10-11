@@ -28,13 +28,13 @@ const readBubble = (root) =>
     const rootCss = getComputedStyle(el)
     const pointsOf = (d, origin) => {
       if (!d) return null
-      // "M x1 y1 L tipX tipY L x2 y2" in the coordinates of the SVG layer.
-      const n = d.match(/-?[\d.]+/g).map(Number)
+      // "M base1 L wall1 Q ctrl1 end1 L tip L end2 Q ctrl2 wall2 L base2" in the coordinates of the SVG layer.
+      const n = d.match(/-?[\d.]+(?:e-?\d+)?/g).map(Number)
       return {
-        tip: { x: origin.left + n[2], y: origin.top + n[3] },
+        tip: { x: origin.left + n[8], y: origin.top + n[9] },
         base: [
           { x: origin.left + n[0], y: origin.top + n[1] },
-          { x: origin.left + n[4], y: origin.top + n[5] }
+          { x: origin.left + n[16], y: origin.top + n[17] }
         ]
       }
     }
@@ -88,12 +88,12 @@ const expectTailAttached = (b) => {
   expect(b.tailFill).toBe(b.boxBackground)
   expect(b.tailStroke).toBe(b.boxBorderColor)
   expect(b.tailStrokeWidth).toBe(b.boxBorderWidth)
-  // The outline is centered on the border. The fill continues one pixel further in,
+  // The outline ends flat on the inner edge of the border. The fill continues one pixel further in,
   // so the border can't show through the mouth when the page is zoomed.
   if (b.strokeBase) {
     for (let i = 0; i < 2; i++) {
       const shift = Math.hypot(b.strokeBase[i].x - b.base[i].x, b.strokeBase[i].y - b.base[i].y)
-      expect(Math.abs(shift - (b.boxBorderWidth / 2 + 1)), `stroke offset ${shift}`).toBeLessThanOrEqual(0.6)
+      expect(Math.abs(shift - 1), `stroke offset ${shift}`).toBeLessThanOrEqual(0.6)
     }
   }
   // The tip lies outside the box.
@@ -224,14 +224,18 @@ test.describe('with reduced motion', () => {
   }) => {
     const s = section(page, 0)
     const b = await readBubble(bubble(s, 'Always visible'))
-    const sectionRect = await rectOf(s)
+    // Absolute insets are resolved against the padding edge, inside the section border.
+    const sectionPad = await s.evaluate((el) => {
+      const r = el.getBoundingClientRect()
+      return { right: r.left + el.clientLeft + el.clientWidth, top: r.top + el.clientTop }
+    })
     const target = await rectOf(page.locator('#hints-title'))
 
     expect(b.placement).toBe('manual')
     expect(b.boxPosition).toBe('absolute')
-    // right: 28px; top: 18px from the style on the component.
-    near(sectionRect.right - b.box.right, 28, 'right offset')
-    near(b.box.top - sectionRect.top, 18, 'top offset')
+    // right: 28px; top: -64px from the style on the component.
+    near(sectionPad.right - b.box.right, 28, 'right offset')
+    near(b.box.top - sectionPad.top, -64, 'top offset')
     // Colors from the component's style, shared by the tail.
     expect(b.boxBackground).toBe('rgb(254, 249, 195)')
     expectTailAttached(b)
@@ -376,33 +380,24 @@ test('an absolutely positioned bubble only shifts by the root translate', async 
   const root = bubble(stage, 'Placed by CSS')
   await stage.scrollIntoViewIfNeeded()
   const before = await readBubble(root)
-  // Absolute inset is resolved against the padding edge, inside the stage border.
+  // Absolute insets are resolved against the padding edge, inside the stage border.
   const stagePad = await stage.evaluate((el) => {
     const r = el.getBoundingClientRect()
-    const s = getComputedStyle(el)
-    return {
-      left: r.left + parseFloat(s.borderLeftWidth),
-      top: r.top + parseFloat(s.borderTopWidth),
-      width: el.clientWidth,
-      height: el.clientHeight
-    }
+    return { left: r.left + el.clientLeft, top: r.top + el.clientTop }
   })
 
   expect(before.placement).toBe('none')
   expect(before.hasSvg).toBe(false)
+  // Without a target the root is the box, placed by the class on the component.
+  expect(before.box).toEqual(before.root)
   expect(before.rootPosition).toBe('absolute')
-  expect(before.boxPosition).toBe('absolute')
-  near(before.root.left, stagePad.left, 'root left')
-  near(before.root.top, stagePad.top, 'root top')
-  near(before.root.width, stagePad.width, 'root width')
-  near(before.root.height, stagePad.height, 'root height')
   near(before.box.left, stagePad.left + 48, 'resting left')
   near(before.box.top, stagePad.top + 36, 'resting top')
 
   // v-click puts translate on the root and transitions it. The box must stay within that
   // 20px slide the whole time; checking only the frame after transitionend would miss the jump.
   const frames = await root.evaluate(async (el) => {
-    const box = el.querySelector('.vue-pointing-bubble__inner')
+    const box = el.matches('.vue-pointing-bubble__inner') ? el : el.querySelector('.vue-pointing-bubble__inner')
     el.style.transition = 'translate 200ms linear'
     const read = () => {
       const r = box.getBoundingClientRect()

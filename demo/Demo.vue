@@ -161,9 +161,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', placeRightLabel))
       <p>
         Cras mattis consectetur purus sit amet fermentum. Vestibulum id ligula porta felis euismod
         semper. Aenean lacinia bibendum nulla sed consectetur.
-      </p>DOM Path: div#app > div.page > section.demo[0] > div.vue-pointing-bubble[1] > svg
-Position: top=40px, left=21px, width=614px, height=532px
-HTML Element: <svg class="vue-pointing-bubble__svg" style="position: absolute; inset: 0px; width: 100%; height: 100%; overflow: visible; z-index: auto;" data-cursor-element-id="cursor-el-5"></svg> 
+      </p>
       <div class="row">
         <button
           v-for="action in actions"
@@ -184,16 +182,16 @@ HTML Element: <svg class="vue-pointing-bubble__svg" style="position: absolute; i
         placement="manual"
         style="
           right: 28px;
-          top: -56px;
-          padding: 10px;
-          border: 1.5px solid #ca8a04;
+          top: -64px;
+          padding: 16px;
+          border: 4px solid #ca8a04;
           border-radius: 12px;
           background: #fef9c3;
         "
         :tail-base-width="14"
         :shadow="false"
       >
-        <p class="bubble-title">Always visible, placed manually</p>
+        <p class="bubble-title">Always visible, placed manually, pointing to the title</p>
       </PointingBubble>
 
       <PointingBubble
@@ -362,10 +360,10 @@ HTML Element: <svg class="vue-pointing-bubble__svg" style="position: absolute; i
       <p class="hint">
         Leave off <code>target</code> and position the component with CSS:
         <code>position: absolute</code> plus <code>left</code> and <code>top</code>,
-        inside a parent that has <code>position: relative</code>. The bubble fills
-        that parent, so a <code>translate</code> on it — a click animation, for
-        example — only slides the box. <code>left</code> and <code>top</code> stay
-        measured from the same parent for the whole animation.
+        inside a parent that has <code>position: relative</code>. A
+        <code>translate</code> on it — a click animation, for example — slides the box,
+        while <code>left</code> and <code>top</code> stay measured from the same parent
+        for the whole animation.
       </p>
       <div class="placed-stage">
         <PointingBubble class="placed-bubble">Placed by CSS</PointingBubble>
