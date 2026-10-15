@@ -202,7 +202,8 @@ to whatever size the box ends up with.
 </PointingBubble>
 ```
 
-By default, the box fits its content, wraps the text at `maxWidth` (280px), and has
+By default, the box fits its content, wraps the text where it would run past the
+edge of the positioned parent or the viewport on its side of the tip, and has
 `padding` of 8px, a white background, a gray border, and 8px rounded corners.
 These defaults come from a tiny stylesheet that the component adds to the page,
 with zero specificity, so anything your classes or `style` set wins, including
@@ -219,7 +220,7 @@ The box paints itself, so any CSS works on it: gradients, per-corner radii,
 | `background-color`                      | Fill color.                               |
 | `border-top-width`, `border-top-color`  | Outline width and color.                  |
 | `border-top-left-radius`                | Keeps the tail away from rounded corners. |
-| `z-index`                               | Stacking order of the whole bubble (`30` if unset). |
+| `z-index`                               | Stacking order of the whole bubble, when set. |
 
 ```vue
 <PointingBubble :target="button" class="p-3 rounded-xl bg-yellow-100 border-2 border-yellow-600">
@@ -274,8 +275,8 @@ Any CSS unit works, for example `class="left-[7em] top-[5em]"` in Tailwind CSS, 
 
 You don't need a class like `absolute`, because the box is always absolutely
 positioned. Without `left` and `top`, it sits in the top-left corner of the parent.
-The width works as in automatic mode: the box fits its content and wraps at
-`max-width` unless you set a width. In manual mode, the box itself doesn't glide
+The box fits its content and wraps at the edge of the parent, or at `maxWidth`,
+unless you set a width. In manual mode, the box itself doesn't glide
 when you move it, only the tail does. If the box moves without a resize or a change
 of its classes or style, such as during a CSS transition, call `update()`.
 
@@ -284,9 +285,8 @@ of its classes or style, such as during a CSS transition, call `update()`.
 Leave out `target`, or set it to `null`, to draw just the box, with no tail. The
 component then renders the box as a single regular element, with no overlay or
 SVG around it. It's in the normal document flow and doesn't need a positioned
-parent. It's as wide as its content, up to the parent's width. The 280px default
-`maxWidth` doesn't apply here, but an explicit `:max-width`, or a width or
-max-width from your CSS, does. Everything else works as on any element: margins
+parent. It's as wide as its content, up to the parent's width, unless you set
+`:max-width`, or a width or max-width from your CSS. Everything else works as on any element: margins
 such as `mx-auto`, flex or grid item classes such as `flex-1`, and your own
 positioning, for example `class="absolute bottom-24 left-1/2 -translate-x-1/2"`.
 Opacity and transforms that a tool applies to the component's root element, such
@@ -355,9 +355,9 @@ import PointingBubble from 'vue-pointing-bubble/PointingBubble.vue'
 | Prop                 | Type                                  | Default     | Description |
 | -------------------- | ------------------------------------- | ----------- | ----------- |
 | `target`             | `{ x, y }` \| `Element` \| component \| `string` | `null` | What the tip points at. Coordinates are relative to the positioned parent. A string is a CSS selector, looked up with `document.querySelector`; while it matches nothing, the bubble is hidden. Elements are pointed at their center, or at their border with `targetAnchor="edge"`. When `null`, only the box is drawn, without a tail, as a regular element in the document flow. Use `v-if` to hide the bubble entirely. |
-| `placement`          | `'auto'` \| `'top-left'` \| `'top-right'` \| `'bottom-left'` \| `'bottom-right'` \| `'manual'` | `'auto'` | Where the box sits relative to the tip. `auto` chooses the quadrant facing the center of the container. It flips to the other side if the bubble would go outside the viewport, such as after scrolling, and fits on the other side. `manual` leaves the position to the `left` and `top` that you set with `class` or `style`. The tail then grows from whichever side of the box faces the tip. |
+| `placement`          | `'auto'` \| `'top-left'` \| `'top-right'` \| `'bottom-left'` \| `'bottom-right'` \| `'manual'` | `'auto'` | Where the box sits relative to the tip. `auto` chooses the quadrant facing the center of the container, horizontally the side with more room within the container and the viewport. It flips to the other side if the bubble would go outside the viewport, such as after scrolling, and fits on the other side. `manual` leaves the position to the `left` and `top` that you set with `class` or `style`. The tail then grows from whichever side of the box faces the tip. |
 | `targetAnchor`       | `'center'` \| `'edge'`                | `'center'`  | For element targets, where the tip lands. `center` is the element's center. `edge` is the element's border facing the box: the middle of the top or bottom edge with automatic placement, or the nearest border point with `manual` placement. Ignored for coordinate targets. |
-| `maxWidth`           | `number`                              | `280`       | Width in px at which content wraps, unless your `class` or `style` sets a width or max-width. Without a `target`, there's no default: the box is only limited by its parent's width. |
+| `maxWidth`           | `number`                              | —           | Width in px at which content wraps, unless your `class` or `style` sets a width or max-width. By default, the box wraps at the edge of the positioned parent or the viewport, whichever is nearer, on its side of the tip; `auto` placement picks the side with more room. Without a `target`, the box is only limited by its parent's width. |
 | `tailLength`         | `number`                              | `45`        | Horizontal and vertical offset in px from the tip to the box corner. |
 | `tailBaseWidth`      | `number`                              | `24`        | Width in px of the tail where it joins the box. |
 | `padding`            | `number` \| `string`                  | `8`         | Padding of the box (a number means px), unless your `class` or `style` sets a padding. |

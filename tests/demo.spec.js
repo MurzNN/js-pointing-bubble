@@ -136,7 +136,7 @@ test.describe('with reduced motion', () => {
     expect(b.boxBackground).toBe('rgb(255, 255, 255)')
     expect(b.boxRadius).toBe('8px')
     expect(b.boxBorderWidth).toBeGreaterThan(0)
-    // The root is the box: shrunk to its content, without the 280px cap of bubbles with a tail.
+    // The root is the box: shrunk to its content, only limited by its parent.
     expect(b.box).toEqual(b.root)
     expect(b.box.width).toBeGreaterThan(280)
     expect(b.box.width).toBeLessThan((await rectOf(section(page, 0))).width)
@@ -323,6 +323,9 @@ test.describe('with reduced motion', () => {
       else expect(b.box.top).toBeGreaterThan(b.tip.y)
       if (horizontal === 'left') expect(b.box.right).toBeLessThan(b.tip.x)
       else expect(b.box.left).toBeGreaterThan(b.tip.x)
+      // The box wraps rather than running past the edge of the chart.
+      expect(b.box.left).toBeGreaterThanOrEqual(c.left - PX)
+      expect(b.box.right).toBeLessThanOrEqual(c.right + PX)
     }
   })
 
@@ -369,7 +372,7 @@ test.describe('with reduced motion', () => {
     const after = await expectPointing('Webcam')
     near(after.box.left, before.box.left + (stageRect.right - 100 - before.box.left - 20), 'dragged box left')
     near(after.box.top, before.box.top + 50, 'dragged box top')
-    expect(after.rootZIndex).toBe('30')
+    expect(after.rootZIndex).toBe('auto')
     // The tail now grows from the left wall of the box, facing the camera.
     near(Math.min(after.base[0].x, after.base[1].x), after.box.left + after.boxBorderWidth, 'tail on the left wall')
   })

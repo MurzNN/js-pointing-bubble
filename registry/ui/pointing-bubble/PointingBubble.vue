@@ -10,8 +10,6 @@ const CSS = `:where(.vue-pointing-bubble__inner) {
   border-radius: 8px;
 }`
 const SHADOW = 'drop-shadow(0 6px 8px rgba(0, 0, 0, 0.25))'
-const DEFAULT_Z_INDEX = 30
-const DEFAULT_MAX_WIDTH = 280
 // In manual mode CSS owns the box, so only the tail glides.
 const ANIMATED_KEYS = ['tx', 'ty', 'bx', 'by']
 const MANUAL_ANIMATED_KEYS = ['tx', 'ty']
@@ -57,7 +55,8 @@ const props = defineProps({
     validator: (v) => ['center', 'edge'].includes(v)
   },
   // Content wraps at this width (px) unless CSS on the component sets a width or max-width.
-  // Defaults to 280 with a target; without one, the box is only limited by its parent.
+  // By default the box is limited by the room between the tail and the edge of the parent
+  // or the viewport; without a target, only by its parent.
   maxWidth: { type: Number, default: undefined },
   // Distance from the box edge to the tip.
   tailLength: { type: Number, default: 45 },
@@ -172,6 +171,23 @@ const measure = () => {
 // Catches changes of the component's class/style, which are not reactive in the script.
 onUpdated(measure)
 
+// Local px between the end of the tail and the edge of the root, or of the viewport if nearer,
+// on each side of the tip. It doesn't depend on the box size, so the box can be capped by it.
+const room = computed(() => {
+  if (!tip.value) return null
+  const f = frameRect.value
+  const reach = tip.value.x - props.tailLength
+  let left = reach
+  let right = f.width ? f.width - tip.value.x - props.tailLength : Infinity
+  if (f.viewportWidth) {
+    left = Math.min(left, f.left / f.scaleX + reach)
+    right = Math.min(right, (f.viewportWidth - f.left) / f.scaleX - tip.value.x - props.tailLength)
+  }
+  return { left: Math.max(0, left), right: Math.max(0, right) }
+})
+
+const roomierSide = () => (room.value.left > room.value.right ? 'left' : 'right')
+
 // Where the bubble should end up for the current tip, box size, and props.
 const geometry = computed(() => {
   const m = box.value
@@ -203,7 +219,7 @@ const geometry = computed(() => {
   let placement = props.placement
   if (placement === 'auto') {
     let vertical = ty > (f.height || 600) / 2 ? 'top' : 'bottom'
-    let horizontal = tx > (f.width || 800) / 2 ? 'left' : 'right'
+    let horizontal = roomierSide()
 
     // Flip to the other side if the bubble would leave the viewport and fits there.
     // Tip, box, and tail are local pixels; multiply by the scale to reach the viewport.
@@ -363,14 +379,16 @@ const placement = computed(() => (props.target ? current.value?.placement : 'non
 
 // The full-size overlay that the box and the tail are positioned in; only used with a target.
 const overlayStyle = computed(() => {
-  const z = box.value?.zIndex
-  return {
+  const style = {
     position: 'absolute',
     inset: 0,
     pointerEvents: 'none',
-    zIndex: z && z !== 'auto' ? z : DEFAULT_Z_INDEX,
     filter: props.shadow ? SHADOW : undefined
   }
+  // Only an explicit z-index on the box is copied here; otherwise stacking stays at auto.
+  const z = box.value?.zIndex
+  if (z && z !== 'auto') style.zIndex = z
+  return style
 })
 
 // Keys are only added when set: merged with the user's `style`, even an undefined key would win.
@@ -378,8 +396,7 @@ const boxStyle = computed(() => {
   const style = {
     '--vpb-padding': typeof props.padding === 'number' ? `${props.padding}px` : props.padding
   }
-  const maxWidth = props.maxWidth ?? (props.target ? DEFAULT_MAX_WIDTH : null)
-  if (maxWidth != null) style['--vpb-max-width'] = maxWidth + 'px'
+  if (props.maxWidth != null) style['--vpb-max-width'] = props.maxWidth + 'px'
   if (!props.target) {
     // In the flow the box shrinks to its content but never overflows its parent.
     style['--vpb-width'] = 'fit-content'
@@ -388,8 +405,18 @@ const boxStyle = computed(() => {
   }
   const c = current.value
   Object.assign(style, { position: 'absolute', pointerEvents: 'auto', visibility: c ? 'visible' : 'hidden' })
-  // In manual mode the box is positioned by its own CSS; otherwise next to the tip, ignoring margins.
-  if (!manual.value) Object.assign(style, { left: (c?.bx ?? 0) + 'px', top: (c?.by ?? 0) + 'px', margin: 0 })
+  if (manual.value) {
+    // Positioned by its own CSS, the box wraps where it reaches the edge of the parent.
+    style['--vpb-width'] = 'fit-content'
+    return style
+  }
+  // Next to the tip, ignoring margins, and no wider than the room on its side.
+  Object.assign(style, { left: (c?.bx ?? 0) + 'px', top: (c?.by ?? 0) + 'px', margin: 0 })
+  if (props.maxWidth == null && room.value) {
+    const placed = geometry.value?.placement ?? props.placement
+    const side = placed === 'auto' ? roomierSide() : placed.split('-')[1]
+    style['--vpb-max-width'] = room.value[side] + 'px'
+  }
   return style
 })
 
