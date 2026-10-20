@@ -1,10 +1,12 @@
 {
   "name": "react-pointing-bubble",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "React callout / speech bubble whose SVG tail points exactly at coordinates or a DOM element.",
   "type": "module",
   "sideEffects": false,
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "main": "./dist/react-pointing-bubble.cjs",
   "module": "./dist/react-pointing-bubble.js",
   "types": "./dist/index.d.ts",
