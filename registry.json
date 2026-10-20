@@ -1,28 +1,127 @@
 {
-  "$schema": "https://shadcn-vue.com/schema/registry.json",
-  "name": "vue-pointing-bubble",
-  "homepage": "https://murznn.github.io/vue-pointing-bubble/",
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "js-pointing-bubble",
+  "homepage": "https://murznn.github.io/js-pointing-bubble/",
   "items": [
     {
-      "name": "pointing-bubble",
+      "name": "vue-pointing-bubble",
       "type": "registry:ui",
-      "title": "Pointing Bubble",
-      "description": "A Vue 3 callout whose tail points exactly at a coordinate or a DOM element.",
+      "title": "Vue Pointing Bubble",
+      "description": "A Vue 3 callout whose SVG tail points exactly at coordinates or a DOM element.",
       "author": "Alexey Murz Korepov",
       "dependencies": [
-        "vue@^3.3.0"
+        "vue@^3.5.0"
       ],
+      "registryDependencies": [],
       "categories": [
         "callout"
       ],
-      "docs": "Import it from `@/components/ui/pointing-bubble`. The bubble fills its nearest positioned ancestor; coordinates are measured from that ancestor. Full guide: https://murznn.github.io/vue-pointing-bubble/",
+      "docs": "Installs into components/ui/pointing-bubble. Import from @/components/ui/pointing-bubble. Demo: https://murznn.github.io/js-pointing-bubble/vue/",
       "files": [
         {
-          "path": "registry/ui/pointing-bubble/PointingBubble.vue",
+          "path": "packages/vue/src/pointing-bubble/PointingBubble.vue",
           "type": "registry:ui"
         },
         {
-          "path": "registry/ui/pointing-bubble/index.ts",
+          "path": "packages/vue/src/pointing-bubble/index.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "packages/vue/src/pointing-bubble/core.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "packages/vue/src/pointing-bubble/types.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "packages/vue/src/pointing-bubble/styles.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "packages/vue/src/pointing-bubble/resolveTarget.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "packages/vue/src/pointing-bubble/measure.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "packages/vue/src/pointing-bubble/geometry.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "packages/vue/src/pointing-bubble/ease.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "packages/vue/src/pointing-bubble/tail.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "packages/vue/src/pointing-bubble/createBubbleController.ts",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "react-pointing-bubble",
+      "type": "registry:ui",
+      "title": "React Pointing Bubble",
+      "description": "A React callout whose SVG tail points exactly at coordinates or a DOM element.",
+      "author": "Alexey Murz Korepov",
+      "dependencies": [
+        "react@^18.0.0 || ^19.0.0",
+        "react-dom@^18.0.0 || ^19.0.0"
+      ],
+      "registryDependencies": [],
+      "categories": [
+        "callout"
+      ],
+      "docs": "Installs into components/ui/pointing-bubble. Import from @/components/ui/pointing-bubble. Demo: https://murznn.github.io/js-pointing-bubble/react/",
+      "files": [
+        {
+          "path": "packages/react/src/pointing-bubble/PointingBubble.tsx",
+          "type": "registry:ui"
+        },
+        {
+          "path": "packages/react/src/pointing-bubble/index.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "packages/react/src/pointing-bubble/core.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "packages/react/src/pointing-bubble/types.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "packages/react/src/pointing-bubble/styles.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "packages/react/src/pointing-bubble/resolveTarget.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "packages/react/src/pointing-bubble/measure.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "packages/react/src/pointing-bubble/geometry.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "packages/react/src/pointing-bubble/ease.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "packages/react/src/pointing-bubble/tail.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "packages/react/src/pointing-bubble/createBubbleController.ts",
           "type": "registry:ui"
         }
       ]

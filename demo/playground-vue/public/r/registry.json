@@ -1,0 +1,64 @@
+{
+  "$schema": "https://shadcn-vue.com/schema/registry.json",
+  "name": "vue-pointing-bubble",
+  "homepage": "https://murznn.github.io/js-pointing-bubble/",
+  "items": [
+    {
+      "name": "vue-pointing-bubble",
+      "type": "registry:ui",
+      "title": "Vue Pointing Bubble",
+      "description": "A Vue 3 callout whose SVG tail points exactly at coordinates or a DOM element.",
+      "author": "Alexey Murz Korepov",
+      "dependencies": ["vue@^3.5.0"],
+      "registryDependencies": [],
+      "categories": ["callout"],
+      "docs": "Installs into components/ui/pointing-bubble. Import from @/components/ui/pointing-bubble. Demo: https://murznn.github.io/js-pointing-bubble/vue/",
+      "files": [
+        {
+          "path": "packages/vue/src/pointing-bubble/PointingBubble.vue",
+          "type": "registry:ui"
+        },
+        {
+          "path": "packages/vue/src/pointing-bubble/index.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "packages/vue/src/pointing-bubble/core.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "packages/vue/src/pointing-bubble/types.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "packages/vue/src/pointing-bubble/styles.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "packages/vue/src/pointing-bubble/resolveTarget.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "packages/vue/src/pointing-bubble/measure.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "packages/vue/src/pointing-bubble/geometry.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "packages/vue/src/pointing-bubble/ease.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "packages/vue/src/pointing-bubble/tail.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "packages/vue/src/pointing-bubble/createBubbleController.ts",
+          "type": "registry:ui"
+        }
+      ]
+    }
+  ]
+}

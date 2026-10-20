@@ -1,65 +1,46 @@
 {
-  "name": "vue-pointing-bubble",
+  "name": "js-pointing-bubble-monorepo",
+  "private": true,
   "version": "0.1.0",
-  "description": "Vue 3 callout / speech bubble component whose tail points exactly at absolute (x, y) coordinates or at a DOM element.",
-  "keywords": [
-    "vue",
-    "vue3",
-    "callout",
-    "speech-bubble",
-    "tooltip",
-    "popover",
-    "pointer",
-    "svg"
-  ],
-  "author": "Alexey Murz Korepov",
-  "license": "MIT",
-  "homepage": "https://murznn.github.io/vue-pointing-bubble/",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/MurzNN/vue-pointing-bubble.git"
-  },
-  "bugs": {
-    "url": "https://github.com/MurzNN/vue-pointing-bubble/issues"
-  },
+  "description": "Monorepo for js-pointing-bubble, vue-pointing-bubble, and react-pointing-bubble.",
   "type": "module",
-  "main": "./dist/vue-pointing-bubble.umd.cjs",
-  "module": "./dist/vue-pointing-bubble.js",
-  "unpkg": "./dist/vue-pointing-bubble.umd.cjs",
-  "jsdelivr": "./dist/vue-pointing-bubble.umd.cjs",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/vue-pointing-bubble.js",
-      "require": "./dist/vue-pointing-bubble.umd.cjs"
-    },
-    "./PointingBubble.vue": "./registry/ui/pointing-bubble/PointingBubble.vue"
-  },
-  "files": [
-    "dist",
-    "src",
-    "registry"
-  ],
-  "sideEffects": false,
   "scripts": {
-    "dev": "npm run dev:demo",
-    "dev:demo": "vite --config vite.demo.config.js",
-    "build": "vite build && cp src/index.d.ts dist/index.d.ts",
-    "build:demo": "npm run registry:build && vite build --config vite.demo.config.js",
-    "registry:build": "shadcn-vue build --output demo/public/r",
-    "preview:demo": "vite preview --config vite.demo.config.js",
-    "test": "playwright test",
-    "prepare": "npm run build"
-  },
-  "peerDependencies": {
-    "vue": "^3.3.0"
+    "dev": "pnpm --filter @js-pointing-bubble/playground-vue dev",
+    "dev:vue": "pnpm --filter @js-pointing-bubble/playground-vue dev",
+    "dev:react": "pnpm --filter @js-pointing-bubble/playground-react dev",
+    "build": "pnpm -r --filter js-pointing-bubble --filter vue-pointing-bubble --filter react-pointing-bubble run build",
+    "build:core": "pnpm --filter js-pointing-bubble build",
+    "build:vue": "pnpm --filter vue-pointing-bubble build",
+    "build:react": "pnpm --filter react-pointing-bubble build",
+    "build:playground": "pnpm registry:build && pnpm --filter @js-pointing-bubble/playground-vue build && pnpm --filter @js-pointing-bubble/playground-react build && node scripts/assemble-pages.mjs",
+    "core:sync": "node scripts/sync-adapter-core.mjs",
+    "registry:sync": "pnpm core:sync",
+    "registry:merge": "pnpm registry:sync && node scripts/merge-root-registry.mjs",
+    "registry:build": "pnpm registry:merge && pnpm exec shadcn-vue build registry/vue/registry.json -o demo/playground-vue/public/r",
+    "test": "pnpm --filter js-pointing-bubble test && pnpm --filter vue-pointing-bubble test && pnpm --filter react-pointing-bubble test",
+    "test:e2e": "playwright test --workers=1",
+    "lint": "eslint .",
+    "typecheck": "pnpm --filter js-pointing-bubble typecheck && pnpm --filter vue-pointing-bubble typecheck && pnpm --filter react-pointing-bubble typecheck",
+    "readme:packages": "node scripts/release.mjs --readme-only",
+    "release": "node scripts/release.mjs"
   },
   "devDependencies": {
-    "@playwright/test": "^1.63.0",
-    "@vitejs/plugin-vue": "^6.0.9",
+    "@eslint/js": "^9.36.0",
+    "@playwright/test": "^1.56.0",
+    "@types/node": "^22.18.0",
+    "eslint": "^9.36.0",
+    "eslint-plugin-vue": "^10.4.0",
+    "globals": "^17.13.0",
     "shadcn-vue": "^2.8.2",
-    "vite": "^8.3.2",
-    "vue": "^3.5.43"
+    "typescript": "~5.9.2",
+    "typescript-eslint": "^8.44.0",
+    "vue-eslint-parser": "^10.2.0"
+  },
+  "packageManager": "pnpm@11.28.6",
+  "license": "MIT",
+  "homepage": "https://murznn.github.io/js-pointing-bubble/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MurzNN/js-pointing-bubble.git"
   }
 }

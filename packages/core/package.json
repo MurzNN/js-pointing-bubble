@@ -1,0 +1,39 @@
+{
+  "name": "js-pointing-bubble",
+  "version": "0.1.0",
+  "description": "Framework-agnostic callout / speech bubble whose SVG tail points exactly at coordinates or a DOM element.",
+  "type": "module",
+  "sideEffects": false,
+  "files": ["dist"],
+  "main": "./dist/js-pointing-bubble.cjs",
+  "module": "./dist/js-pointing-bubble.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/js-pointing-bubble.js",
+      "require": "./dist/js-pointing-bubble.cjs"
+    }
+  },
+  "scripts": {
+    "build": "vite build",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@microsoft/api-extractor": "^7.59.4",
+    "@types/node": "^22.18.0",
+    "jsdom": "^26.1.0",
+    "typescript": "~5.9.2",
+    "unplugin-dts": "^1.0.0-beta.6",
+    "vite": "^7.1.7",
+    "vitest": "^3.2.4"
+  },
+  "license": "MIT",
+  "homepage": "https://murznn.github.io/js-pointing-bubble/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MurzNN/js-pointing-bubble.git",
+    "directory": "packages/core"
+  }
+}
