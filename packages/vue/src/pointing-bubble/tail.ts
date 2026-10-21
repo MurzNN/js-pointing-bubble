@@ -7,21 +7,29 @@ export interface BuildTailOptions {
   tailBaseWidth: number
 }
 
+type TailSide = 'left' | 'right' | 'top' | 'bottom'
+
 /**
- * Build fill + stroke SVG path `d` for the tail from the box wall facing the tip.
- * Fill extends 1px past the border inner edge to cover zoom snapping seams.
+ * Open wedge tail in frame space.
+ *
+ * The CSS box border stays as-is. SVG only draws the tip: two short hooks on
+ * the inner edge of the border, then straight edges to the tip. Because SVG
+ * stroke is centred on the path, the path sits half a stroke-width inside that
+ * edge so the stroke’s outer edge lands on the border step. Fill overlaps the
+ * box background (and is slightly wider than the mouth) so zoom/subpixel
+ * rounding cannot open a hairline gap. No box outline is redrawn.
  */
 export function buildTailPaths(opts: BuildTailOptions): TailPaths | null {
   const { geometry: c, strokeWidth: bw, radius, tailBaseWidth } = opts
   const { placement, tx, ty, bx, by, w, h } = c
-  const r =
+  const cornerR =
     parseFloat(radius) *
       (radius.endsWith('%') ? Math.min(w, h) / 100 : 1) || 0
   const half = tailBaseWidth / 2
   const clamp = (v: number, lo: number, hi: number) =>
     lo > hi ? (lo + hi) / 2 : Math.min(hi, Math.max(lo, v))
 
-  let side: 'left' | 'right' | 'top' | 'bottom' | null = null
+  let side: TailSide | null = null
   let along = 0
   if (placement === 'manual') {
     const dx = Math.max(bx - tx, tx - (bx + w), 0)
@@ -46,49 +54,56 @@ export function buildTailPaths(opts: BuildTailOptions): TailPaths | null {
     return null
   }
 
-  const cover = 1
   const horizontalWall = side === 'top' || side === 'bottom'
+  // Positive depth = outside the border-box along the chosen wall.
   const at = {
     left: (a: number, depth: number): [number, number] => [bx - depth, a],
     right: (a: number, depth: number): [number, number] => [bx + w + depth, a],
     top: (a: number, depth: number): [number, number] => [a, by - depth],
     bottom: (a: number, depth: number): [number, number] => [a, by + h + depth],
   }[side]
-  const tipDepth = {
-    left: bx - tx,
-    right: tx - bx - w,
-    top: by - ty,
-    bottom: ty - by - h,
-  }[side]
-  const a = horizontalWall
-    ? clamp(along, bx + r + half + bw / 2, bx + w - r - half - bw / 2)
-    : clamp(along, by + r + half + bw / 2, by + h - r - half - bw / 2)
-  const bend = Math.max(0, Math.min(bw, tipDepth / 2))
-  const point = ([x, y]: [number, number]) => `${x} ${y}`
-  const edge = (base: number, innerDepth: number) => {
-    const ctrl = at(base, bend)
-    const dist = Math.hypot(tx - ctrl[0], ty - ctrl[1]) || 1
-    const end: [number, number] = [
-      ctrl[0] + ((tx - ctrl[0]) * bend) / dist,
-      ctrl[1] + ((ty - ctrl[1]) * bend) / dist,
-    ]
-    return {
-      inner: point(at(base, innerDepth)),
-      outer: point(at(base, 0)),
-      ctrl: point(ctrl),
-      end: point(end),
-    }
-  }
-  const tail = (innerDepth: number) => {
-    const s1 = edge(a - half, innerDepth)
-    const s2 = edge(a + half, innerDepth)
-    return (
-      `M ${s1.inner} L ${s1.outer} Q ${s1.ctrl} ${s1.end} L ${tx} ${ty} ` +
-      `L ${s2.end} Q ${s2.ctrl} ${s2.outer} L ${s2.inner}`
-    )
-  }
+
+  const a0 = horizontalWall ? bx : by
+  const a1wall = horizontalWall ? bx + w : by + h
+  const a = clamp(
+    along,
+    a0 + half + bw / 2 + cornerR,
+    a1wall - half - bw / 2 - cornerR,
+  )
+  const pt = ([x, y]: [number, number]) => `${x} ${y}`
+
+  // Depth 0 = outer edge; −bw = inner edge of the CSS border.
+  // Stroke is centred on the path — keep its outer edge on that inner edge.
+  const borderInner = -bw
+  const attach = bw > 0 ? borderInner - bw / 2 : 0
+  const hook = Math.max(bw, 4)
+  // Overlap past the content edge so fractional zoom / subpixel layout cannot
+  // open a 1px crack between box background and tail fill.
+  const cover = Math.max(2, bw) + 2
+
+  const m1 = a - half
+  const m2 = a + half
+  const hook1 = at(m1 - hook, attach)
+  const mouth1 = at(m1, attach)
+  const mouth2 = at(m2, attach)
+  const hook2 = at(m2 + hook, attach)
+
+  // Fill is a bit wider than the mouth so side AA cannot leave a hairline.
+  const f1 = m1 - 1
+  const f2 = m2 + 1
+  const inner1 = at(f1, -(bw + cover))
+  const inner2 = at(f2, -(bw + cover))
+  // Past the outer edge so fill hides AA gaps over the border.
+  const outer1 = at(f1, 1)
+  const outer2 = at(f2, 1)
+
   return {
-    fill: `${tail(-bw - cover)} Z`,
-    stroke: bw ? tail(-bw) : null,
+    fill:
+      `M ${pt(inner1)} L ${pt(outer1)} L ${tx} ${ty} ` +
+      `L ${pt(outer2)} L ${pt(inner2)} Z`,
+    stroke: bw
+      ? `M ${pt(hook1)} L ${pt(mouth1)} L ${tx} ${ty} ` +
+        `L ${pt(mouth2)} L ${pt(hook2)}`
+      : null,
   }
 }

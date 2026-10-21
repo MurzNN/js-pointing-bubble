@@ -138,6 +138,37 @@ onBeforeUnmount(() => window.removeEventListener('resize', placeRightLabel))
       </p>
     </header>
 
+    <section class="demo" id="thick-border">
+      <h2>Thick border / tail seam</h2>
+      <p class="hint">
+        Repro for thick CSS borders. The box keeps its normal CSS border; the SVG is only
+        an open wedge (hooks on the inner edge of the border, then straight edges to the tip).
+      </p>
+      <div class="thick-border-stage">
+        <span id="thick-border-target" class="thick-border-target">target</span>
+        <PointingBubble
+          target="#thick-border-target"
+          placement="manual"
+          target-anchor="center"
+          style="
+            position: absolute;
+            left: 24px;
+            top: 36px;
+            width: 220px;
+            padding: 12px 14px;
+            border: 12px solid #6b7280;
+            border-radius: 10px;
+            background: #fff;
+          "
+          :tail-base-width="28"
+          :tail-length="40"
+        >
+          <p class="bubble-title">Thick 12px border</p>
+          <p class="bubble-text">Tail should meet the box with no seam across the mouth.</p>
+        </PointingBubble>
+      </div>
+    </section>
+
     <section class="demo">
       <h2>Static and hover hints<span id="hints-title" style="margin-left: 8px" /></h2>
       <p class="hint">

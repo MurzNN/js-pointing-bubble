@@ -143,9 +143,11 @@ export const PointingBubble = forwardRef(function PointingBubble(
     .filter(Boolean)
     .join(' ')
 
+  // Controller styles last so open-side border overrides (user `border`
+  // shorthand would otherwise redraw the attachment wall and leave a seam).
   const rootStyle = toCss({
-    ...state.boxStyle,
     ...(style as object),
+    ...state.boxStyle,
   })
 
   return (

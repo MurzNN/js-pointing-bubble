@@ -79,4 +79,42 @@ describe('PointingBubble', () => {
     expect(root.classList.contains('pointing-bubble__inner')).toBe(true)
     expect(root.querySelector('svg.pointing-bubble__svg')).toBeTruthy()
   })
+
+  it('leaves the CSS border intact when drawing the open wedge tail', async () => {
+    const stage = document.createElement('div')
+    stage.style.cssText = 'position:relative;width:400px;height:300px'
+    const target = document.createElement('button')
+    target.id = 'pb-thick'
+    stage.appendChild(target)
+    document.body.appendChild(stage)
+
+    stage.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, right: 400, bottom: 300, width: 400, height: 300, x: 0, y: 0, toJSON() {} })
+    target.getBoundingClientRect = () =>
+      ({ left: 350, top: 140, right: 380, bottom: 160, width: 30, height: 20, x: 350, y: 140, toJSON() {} })
+
+    const wrapper = mount(PointingBubble, {
+      props: {
+        target: '#pb-thick',
+        placement: 'manual',
+        transitionDuration: 0,
+      },
+      attrs: {
+        style:
+          'position:absolute;left:40px;top:100px;width:160px;border:12px solid #6b7280;background:#fff',
+      },
+      slots: { default: 'Thick' },
+      attachTo: stage,
+    })
+
+    const root = wrapper.element as HTMLElement
+    root.getBoundingClientRect = () =>
+      ({ left: 40, top: 100, right: 200, bottom: 160, width: 160, height: 60, x: 40, y: 100, toJSON() {} })
+
+    wrapper.vm.update()
+    await nextTick()
+
+    expect(root.style.borderColor).not.toBe('transparent')
+    expect(root.querySelector('svg.pointing-bubble__svg')).toBeTruthy()
+  })
 })

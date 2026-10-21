@@ -161,11 +161,13 @@ function update() {
 
 defineExpose({ update })
 
+// Controller styles last so open-side border overrides (user `border`
+// shorthand would otherwise redraw the attachment wall and leave a seam).
 const rootStyle = computed(
   () =>
     ({
-      ...render.boxStyle,
       ...fallthroughStyle.value,
+      ...render.boxStyle,
     }) as CSSProperties,
 )
 
