@@ -59,6 +59,10 @@ export function measureBox(boxEl: HTMLElement, frame: FrameRect): BoxMeasure {
     fill: s.backgroundColor,
     stroke: s.borderTopColor,
     strokeWidth: parseFloat(s.borderTopWidth) || 0,
+    // Abspos SVG is positioned against the padding edge; path math uses the
+    // border box from getBoundingClientRect — subtract these when offsetting.
+    borderLeft: (parseFloat(s.borderLeftWidth) || 0) / scaleX,
+    borderTop: (parseFloat(s.borderTopWidth) || 0) / scaleY,
     radius: s.borderTopLeftRadius,
     zIndex: s.zIndex,
   }

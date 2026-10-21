@@ -21,6 +21,8 @@ const box: BoxMeasure = {
   fill: '#fff',
   stroke: '#000',
   strokeWidth: 2,
+  borderLeft: 2,
+  borderTop: 2,
   radius: '8px',
   zIndex: 'auto',
 }

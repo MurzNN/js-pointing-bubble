@@ -50,6 +50,9 @@ export interface BoxMeasure {
   fill: string
   stroke: string
   strokeWidth: number
+  /** CSS border widths — abspos children are offset from the padding edge. */
+  borderLeft: number
+  borderTop: number
   radius: string
   zIndex: string
 }

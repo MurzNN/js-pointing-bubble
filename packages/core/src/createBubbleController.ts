@@ -191,10 +191,13 @@ export function createBubbleController(
 
     let svgStyle: StyleMap = {}
     if (tail && current && frameRect.width && frameRect.height) {
+      // left/top are relative to the padding edge; bx/by are border-box.
+      const padX = box?.borderLeft ?? 0
+      const padY = box?.borderTop ?? 0
       svgStyle = {
         position: 'absolute',
-        left: `${-current.bx}px`,
-        top: `${-current.by}px`,
+        left: `${-current.bx - padX}px`,
+        top: `${-current.by - padY}px`,
         width: `${frameRect.width}px`,
         height: `${frameRect.height}px`,
         overflow: 'visible',
