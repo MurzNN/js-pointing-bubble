@@ -1,6 +1,6 @@
 {
   "name": "vue-pointing-bubble",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Vue 3 callout / speech bubble whose SVG tail points exactly at coordinates or a DOM element.",
   "type": "module",
   "sideEffects": false,
