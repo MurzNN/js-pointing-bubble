@@ -140,8 +140,6 @@ Expose / ref: `update()` after non-reactive layout changes.
 The component root is always the bubble chrome (`.pointing-bubble` + `.pointing-bubble__inner`). With a `target`, tip/tail use the nearest positioned ancestor as the coordinate frame; keep the bubble under that stage (avoid `overflow: hidden` between them). Free dragging / absolute CSS ⇒ `placement="manual"`; `auto` owns `left`/`top`.
 
 CSS hooks: `.pointing-bubble`, `.pointing-bubble__inner`, `.pointing-bubble__svg`, `.pointing-bubble__path`. Vars: `--pb-padding`, `--pb-max-width`, `--pb-width`.
-
-**Breaking:** root is always the box (no overlay wrapper). Class/style/`v-drag` land on the chrome. **Breaking (v0.2):** class prefix renamed from `.vue-pointing-bubble*` / `--vpb-*` to `.pointing-bubble*` / `--pb-*`.
 <!-- /pkg:all -->
 
 ## Demos
@@ -169,11 +167,12 @@ Monorepo layout: `packages/{core,vue,react}`, `demo/playground-{vue,react}`.
 
 ## Publishing (npm)
 
-`vue-pointing-bubble` and `react-pointing-bubble` publish from GitHub Actions via npm Trusted Publishing (OIDC). Workflow: [`.github/workflows/publish.yml`](.github/workflows/publish.yml).
+`vue-pointing-bubble` and `react-pointing-bubble` publish from GitHub Actions via npm Trusted Publishing (OIDC). Workflow: [`.github/workflows/publish.yml`](.github/workflows/publish.yml). Each release updates [`CHANGELOG.md`](CHANGELOG.md) (folding `[Unreleased]` + commits since the previous tag) and creates a matching GitHub Release.
 
 ```bash
-pnpm release          # patch bump, refresh package READMEs, commit, tag, push
+pnpm release          # patch bump, CHANGELOG, package READMEs, commit, tag, push (+ GH Release)
 pnpm release minor
+pnpm release --dry-run
 ```
 
 Ensure npm Trusted Publisher is configured for both packages with workflow filename `publish.yml`.

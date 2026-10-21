@@ -59,11 +59,9 @@ const btn = ref<HTMLElement | null>(null)
 
 Expose / ref: `update()` after non-reactive layout changes.
 
-The component root is always the bubble chrome. With a `target`, tip/tail use the nearest positioned ancestor as the frame. Free dragging / absolute CSS ⇒ `placement="manual"`.
+The component root is always the bubble chrome (`.pointing-bubble` + `.pointing-bubble__inner`). With a `target`, tip/tail use the nearest positioned ancestor as the coordinate frame; keep the bubble under that stage (avoid `overflow: hidden` between them). Free dragging / absolute CSS ⇒ `placement="manual"`; `auto` owns `left`/`top`.
 
 CSS hooks: `.pointing-bubble`, `.pointing-bubble__inner`, `.pointing-bubble__svg`, `.pointing-bubble__path`. Vars: `--pb-padding`, `--pb-max-width`, `--pb-width`.
-
-**Breaking:** root is always the box (no overlay wrapper). **Breaking (v0.2):** class prefix renamed from `.vue-pointing-bubble*` / `--vpb-*` to `.pointing-bubble*` / `--pb-*`.
 
 ## License
 
