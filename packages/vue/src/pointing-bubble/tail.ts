@@ -12,12 +12,12 @@ type TailSide = 'left' | 'right' | 'top' | 'bottom'
 /**
  * Open wedge tail in frame space.
  *
- * The CSS box border stays as-is. SVG only draws the tip: two short hooks on
- * the inner edge of the border, then straight edges to the tip. Because SVG
- * stroke is centred on the path, the path sits half a stroke-width inside that
- * edge so the stroke’s outer edge lands on the border step. Fill overlaps the
- * box background (and is slightly wider than the mouth) so zoom/subpixel
- * rounding cannot open a hairline gap. No box outline is redrawn.
+ * The CSS box border stays as-is. SVG only draws the tip: short hooks that sit
+ * on the border band, then straight edges to the tip. SVG stroke is centred on
+ * the path, so the path runs down the middle of the border (depth −bw/2) and
+ * the stroke paints over the CSS border rather than into the content. Fill
+ * overlaps the box background (and is slightly wider than the mouth) so
+ * zoom/subpixel rounding cannot open a hairline gap. No box outline is redrawn.
  */
 export function buildTailPaths(opts: BuildTailOptions): TailPaths | null {
   const { geometry: c, strokeWidth: bw, radius, tailBaseWidth } = opts
@@ -72,10 +72,9 @@ export function buildTailPaths(opts: BuildTailOptions): TailPaths | null {
   )
   const pt = ([x, y]: [number, number]) => `${x} ${y}`
 
-  // Depth 0 = outer edge; −bw = inner edge of the CSS border.
-  // Stroke is centred on the path — keep its outer edge on that inner edge.
-  const borderInner = -bw
-  const attach = bw > 0 ? borderInner - bw / 2 : 0
+  // Depth 0 = outer edge; −bw = inner edge. Centre the stroke on the border
+  // band (−bw/2) so it covers the CSS border from outer to inner edge.
+  const attach = bw > 0 ? -bw / 2 : 0
   const hook = Math.max(bw, 4)
   // Overlap past the content edge so fractional zoom / subpixel layout cannot
   // open a 1px crack between box background and tail fill.
