@@ -16,8 +16,8 @@ type TailSide = 'left' | 'right' | 'top' | 'bottom'
  * on the border band, then straight edges to the tip. SVG stroke is centred on
  * the path, so the path runs down the middle of the border (depth −bw/2) and
  * the stroke paints over the CSS border rather than into the content. Fill
- * overlaps the box background (and is slightly wider than the mouth) so
- * zoom/subpixel rounding cannot open a hairline gap. No box outline is redrawn.
+ * follows the mouth (hook starts) to the tip and overlaps the box background
+ * so zoom/subpixel rounding cannot open a hairline gap. No box outline is redrawn.
  */
 export function buildTailPaths(opts: BuildTailOptions): TailPaths | null {
   const { geometry: c, strokeWidth: bw, radius, tailBaseWidth } = opts
@@ -82,19 +82,19 @@ export function buildTailPaths(opts: BuildTailOptions): TailPaths | null {
 
   const m1 = a - half
   const m2 = a + half
+  // Hook ends (far along the wall) vs starts (mouth — where edges run to tip).
   const hook1 = at(m1 - hook, attach)
   const mouth1 = at(m1, attach)
   const mouth2 = at(m2, attach)
   const hook2 = at(m2 + hook, attach)
 
-  // Fill is a bit wider than the mouth so side AA cannot leave a hairline.
-  const f1 = m1 - 1
-  const f2 = m2 + 1
-  const inner1 = at(f1, -(bw + cover))
-  const inner2 = at(f2, -(bw + cover))
+  // Fill follows hook starts (mouth), not the wider hook ends, so it stays
+  // inside the stroke edges to the tip.
+  const inner1 = at(m1, -(bw + cover))
+  const inner2 = at(m2, -(bw + cover))
   // Past the outer edge so fill hides AA gaps over the border.
-  const outer1 = at(f1, 1)
-  const outer2 = at(f2, 1)
+  const outer1 = at(m1, 1)
+  const outer2 = at(m2, 1)
 
   return {
     fill:
