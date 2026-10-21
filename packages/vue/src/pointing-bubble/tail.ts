@@ -16,8 +16,9 @@ type TailSide = 'left' | 'right' | 'top' | 'bottom'
  * on the border band, then straight edges to the tip. SVG stroke is centred on
  * the path, so the path runs down the middle of the border (depth −bw/2) and
  * the stroke paints over the CSS border rather than into the content. Fill
- * follows the mouth (hook starts) to the tip and overlaps the box background
- * so zoom/subpixel rounding cannot open a hairline gap. No box outline is redrawn.
+ * follows the same mouth→tip rays as the stroke (covering the border band via
+ * a short outer stub) so fill does not sit inside the stroke. No box outline
+ * is redrawn.
  */
 export function buildTailPaths(opts: BuildTailOptions): TailPaths | null {
   const { geometry: c, strokeWidth: bw, radius, tailBaseWidth } = opts
@@ -75,7 +76,8 @@ export function buildTailPaths(opts: BuildTailOptions): TailPaths | null {
   // Depth 0 = outer edge; −bw = inner edge. Centre the stroke on the border
   // band (−bw/2) so it covers the CSS border from outer to inner edge.
   const attach = bw > 0 ? -bw / 2 : 0
-  const hook = Math.max(bw, 4)
+  // Short stubs along the wall so the stroke meets the CSS border cleanly.
+  const hook = 2
   // Overlap past the content edge so fractional zoom / subpixel layout cannot
   // open a 1px crack between box background and tail fill.
   const cover = Math.max(2, bw) + 2
@@ -88,18 +90,19 @@ export function buildTailPaths(opts: BuildTailOptions): TailPaths | null {
   const mouth2 = at(m2, attach)
   const hook2 = at(m2 + hook, attach)
 
-  // Fill follows hook starts (mouth), not the wider hook ends, so it stays
-  // inside the stroke edges to the tip.
+  // Fill must use the same mouth→tip rays as the stroke. Going to tip from a
+  // point past the outer edge (different depth, same along) skews those rays
+  // inward and leaves a border-sized gap between the box and the fill.
   const inner1 = at(m1, -(bw + cover))
   const inner2 = at(m2, -(bw + cover))
-  // Past the outer edge so fill hides AA gaps over the border.
+  // Past the outer edge so fill still covers the CSS border band.
   const outer1 = at(m1, 1)
   const outer2 = at(m2, 1)
 
   return {
     fill:
-      `M ${pt(inner1)} L ${pt(outer1)} L ${tx} ${ty} ` +
-      `L ${pt(outer2)} L ${pt(inner2)} Z`,
+      `M ${pt(inner1)} L ${pt(outer1)} L ${pt(mouth1)} L ${tx} ${ty} ` +
+      `L ${pt(mouth2)} L ${pt(outer2)} L ${pt(inner2)} Z`,
     stroke: bw
       ? `M ${pt(hook1)} L ${pt(mouth1)} L ${tx} ${ty} ` +
         `L ${pt(mouth2)} L ${pt(hook2)}`
