@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import {
   computed,
+  getCurrentInstance,
   onBeforeUnmount,
   onMounted,
+  reactive,
   ref,
+  useAttrs,
   watch,
   type ComponentPublicInstance,
   type CSSProperties,
@@ -43,17 +46,26 @@ const props = withDefaults(
   },
 )
 
-const rootRef = ref<HTMLElement | null>(null)
-const boxRef = ref<HTMLElement | null>(null)
+const attrs = useAttrs()
+const fallthroughClass = computed(() => attrs.class)
+const fallthroughStyle = computed(() => attrs.style as CSSProperties | undefined)
+const restAttrs = computed(() => {
+  const { class: _class, style: _style, ...rest } = attrs as Record<
+    string,
+    unknown
+  >
+  return rest
+})
 
-const render = ref({
+const rootRef = ref<HTMLElement | null>(null)
+
+const render = reactive({
   hasTarget: false,
-  placement: 'none' as const,
+  placement: 'none' as 'none' | string,
   tip: null as Point | null,
   slotTip: null as Point | null,
-  overlayStyle: {} as Record<string, string | number | undefined>,
   boxStyle: {} as Record<string, string | number | undefined>,
-  rootIsBox: true,
+  svgStyle: {} as Record<string, string | number | undefined>,
   tail: null as { fill: string; stroke: string | null } | null,
   boxFill: '',
   boxStroke: '',
@@ -84,11 +96,14 @@ function unwrapTarget(
   return null
 }
 
+const instance = getCurrentInstance()
 const controller = createBubbleController({
-  getRootEl: () => rootRef.value,
-  getBoxEl: () => boxRef.value,
+  getBoxEl: () => rootRef.value,
   onChange: (state) => {
-    render.value = state as typeof render.value
+    Object.assign(render, state)
+    // Hosts like Slidev (async slides + directives) can leave the render
+    // effect idle after layout-driven controller updates; flush explicitly.
+    instance?.update()
   },
 })
 
@@ -148,56 +163,35 @@ defineExpose({ update })
 
 const rootStyle = computed(
   () =>
-    (render.value.rootIsBox
-      ? render.value.boxStyle
-      : render.value.overlayStyle) as CSSProperties,
-)
-
-const innerStyle = computed(() => {
-  if (render.value.rootIsBox) return { display: 'contents' } as CSSProperties
-  return render.value.boxStyle as CSSProperties
-})
-
-const svgStyle = computed(
-  () =>
     ({
-      position: 'absolute',
-      inset: '0',
-      width: '100%',
-      height: '100%',
-      overflow: 'visible',
-      zIndex: render.value.boxZIndex,
+      ...render.boxStyle,
+      ...fallthroughStyle.value,
     }) as CSSProperties,
 )
+
+const svgStyle = computed(() => render.svgStyle as CSSProperties)
 </script>
 
 <template>
   <div
     ref="rootRef"
-    :class="['pointing-bubble', { 'pointing-bubble__inner': !target }]"
+    :class="['pointing-bubble', 'pointing-bubble__inner', fallthroughClass]"
     :data-placement="render.placement"
-    v-bind="target ? {} : $attrs"
+    v-bind="restAttrs"
     :style="rootStyle"
   >
-    <div
-      ref="boxRef"
-      :class="{ 'pointing-bubble__inner': !!target }"
-      v-bind="target ? $attrs : {}"
-      :style="innerStyle"
-    >
-      <slot :placement="render.placement" :tip="render.slotTip">
-        <p
-          :style="{
-            margin: 0,
-            fontSize: '14px',
-            fontWeight: 600,
-            color: '#1e293b',
-          }"
-        >
-          Callout content
-        </p>
-      </slot>
-    </div>
+    <slot :placement="render.placement" :tip="render.slotTip">
+      <p
+        :style="{
+          margin: 0,
+          fontSize: '14px',
+          fontWeight: 600,
+          color: '#1e293b',
+        }"
+      >
+        Callout content
+      </p>
+    </slot>
     <svg
       v-if="target && render.tail"
       class="pointing-bubble__svg"

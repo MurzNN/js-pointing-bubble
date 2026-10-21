@@ -1,6 +1,11 @@
 import { easeGeometry, type EaseHandle } from './ease'
 import { computeGeometry, computeRoom, roomierSide } from './geometry'
-import { measureBox, measureFrame, sameKeys } from './measure'
+import {
+  measureBox,
+  measureFrameFrom,
+  positioningFrameEl,
+  sameKeys,
+} from './measure'
 import { isPoint, resolveElement } from './resolveTarget'
 import { injectBubbleStyles, SHADOW } from './styles'
 import { buildTailPaths } from './tail'
@@ -24,10 +29,13 @@ export interface BubbleRenderState {
   tip: Point | null
   /** Tip passed to slot/children (resolved geometry tip when available). */
   slotTip: Point | null
-  overlayStyle: StyleMap
+  /** Applied to the component root (always the bubble chrome). */
   boxStyle: StyleMap
-  /** When no target, root element is the box. */
-  rootIsBox: boolean
+  /**
+   * SVG layer covering the positioning frame, offset so path coords stay
+   * frame-local. Empty when there is no tail.
+   */
+  svgStyle: StyleMap
   tail: TailPaths | null
   boxFill: string
   boxStroke: string
@@ -36,7 +44,7 @@ export interface BubbleRenderState {
 }
 
 export interface BubbleControllerOptions {
-  getRootEl: () => HTMLElement | null
+  /** The bubble chrome element (component root). */
   getBoxEl: () => HTMLElement | null
   onChange?: (state: BubbleRenderState) => void
 }
@@ -55,9 +63,8 @@ function emptyState(hasTarget: boolean): BubbleRenderState {
     placement: 'none',
     tip: null,
     slotTip: null,
-    overlayStyle: {},
     boxStyle: {},
-    rootIsBox: !hasTarget,
+    svgStyle: {},
     tail: null,
     boxFill: '',
     boxStroke: '',
@@ -76,15 +83,14 @@ function renderStateEqual(a: BubbleRenderState, b: BubbleRenderState): boolean {
   return (
     a.hasTarget === b.hasTarget &&
     a.placement === b.placement &&
-    a.rootIsBox === b.rootIsBox &&
     a.boxFill === b.boxFill &&
     a.boxStroke === b.boxStroke &&
     a.boxStrokeWidth === b.boxStrokeWidth &&
     a.boxZIndex === b.boxZIndex &&
     pointEqual(a.tip, b.tip) &&
     pointEqual(a.slotTip, b.slotTip) &&
-    sameKeys(a.overlayStyle, b.overlayStyle) &&
     sameKeys(a.boxStyle, b.boxStyle) &&
+    sameKeys(a.svgStyle, b.svgStyle) &&
     a.tail?.fill === b.tail?.fill &&
     a.tail?.stroke === b.tail?.stroke
   )
@@ -129,15 +135,6 @@ export function createBubbleController(
       ? (current?.placement ?? 'none')
       : 'none'
 
-    const overlayStyle: StyleMap = {
-      position: 'absolute',
-      inset: '0',
-      pointerEvents: 'none',
-      filter: config.shadow ? SHADOW : undefined,
-    }
-    const z = box?.zIndex
-    if (z && z !== 'auto') overlayStyle.zIndex = z
-
     const boxStyle: StyleMap = {
       '--pb-padding':
         typeof config.padding === 'number'
@@ -147,15 +144,15 @@ export function createBubbleController(
     if (config.maxWidth != null) {
       boxStyle['--pb-max-width'] = `${config.maxWidth}px`
     }
+    if (config.shadow) boxStyle.filter = SHADOW
 
     if (!hasTarget) {
       boxStyle['--pb-width'] = 'fit-content'
-      if (config.shadow) boxStyle.filter = SHADOW
     } else {
       Object.assign(boxStyle, {
         position: 'absolute',
         pointerEvents: 'auto',
-        visibility: current ? 'visible' : 'hidden',
+        overflow: 'visible',
       })
       if (manual) {
         boxStyle['--pb-width'] = 'fit-content'
@@ -177,6 +174,9 @@ export function createBubbleController(
       }
     }
 
+    const z = box?.zIndex
+    if (z && z !== 'auto') boxStyle.zIndex = z
+
     const tail =
       hasTarget && current && box
         ? buildTailPaths({
@@ -187,16 +187,27 @@ export function createBubbleController(
           })
         : null
 
+    let svgStyle: StyleMap = {}
+    if (tail && current && frameRect.width && frameRect.height) {
+      svgStyle = {
+        position: 'absolute',
+        left: `${-current.bx}px`,
+        top: `${-current.by}px`,
+        width: `${frameRect.width}px`,
+        height: `${frameRect.height}px`,
+        overflow: 'visible',
+        pointerEvents: 'none',
+        zIndex: box?.zIndex ?? 'auto',
+      }
+    }
+
     return {
       hasTarget,
       placement,
       tip,
-      slotTip: geometry
-        ? { x: geometry.tx, y: geometry.ty }
-        : tip,
-      overlayStyle,
+      slotTip: geometry ? { x: geometry.tx, y: geometry.ty } : tip,
       boxStyle,
-      rootIsBox: !hasTarget,
+      svgStyle,
       tail,
       boxFill: box?.fill ?? '',
       boxStroke: box?.stroke ?? '',
@@ -238,16 +249,8 @@ export function createBubbleController(
     )
   }
 
-  function measure() {
-    const root = options.getRootEl()
-    const boxEl = options.getBoxEl()
-    if (!boxEl || config.target == null || !root) return
-    const next = measureBox(
-      boxEl,
-      root,
-      frameRect,
-      config.placement === 'manual',
-    )
+  function measure(boxEl: HTMLElement) {
+    const next = measureBox(boxEl, frameRect)
     if (
       !sameKeys(
         next as unknown as Record<string, unknown>,
@@ -259,8 +262,8 @@ export function createBubbleController(
   }
 
   function update() {
-    const root = options.getRootEl()
-    if (config.target == null || !root) {
+    const boxEl = options.getBoxEl()
+    if (config.target == null || !boxEl) {
       tip = null
       targetRect = null
       box = null
@@ -270,8 +273,15 @@ export function createBubbleController(
       return
     }
 
-    frameRect = measureFrame(root)
-    const el = resolveElement(config.target)
+    frameRect = measureFrameFrom(boxEl)
+    // Prefer matching inside the positioning frame so short selectors like
+    // `h1` / `p` resolve on the local stage (e.g. a Slidev slide), not the
+    // first match in the whole document.
+    const el =
+      typeof config.target === 'string'
+        ? positioningFrameEl(boxEl).querySelector(config.target) ??
+          resolveElement(config.target)
+        : resolveElement(config.target)
     if (el) {
       const r = el.getBoundingClientRect()
       const { scaleX, scaleY, left, top } = frameRect
@@ -281,7 +291,12 @@ export function createBubbleController(
         right: (r.right - left) / scaleX,
         bottom: (r.bottom - top) / scaleY,
       }
-      if (!sameKeys(rect as unknown as Record<string, unknown>, targetRect as unknown as Record<string, unknown> | null)) {
+      if (
+        !sameKeys(
+          rect as unknown as Record<string, unknown>,
+          targetRect as unknown as Record<string, unknown> | null,
+        )
+      ) {
         targetRect = rect
       }
       tip = {
@@ -300,7 +315,7 @@ export function createBubbleController(
       emit()
       return
     }
-    measure()
+    measure(boxEl)
     recomputeGeometry()
   }
 
@@ -317,13 +332,10 @@ export function createBubbleController(
     if (typeof ResizeObserver === 'undefined') return
     resizeObserver?.disconnect()
     resizeObserver = new ResizeObserver(() => update())
-    const root = options.getRootEl()
     const boxEl = options.getBoxEl()
-    if (root) resizeObserver.observe(root)
     if (boxEl) resizeObserver.observe(boxEl)
   }
 
-  // Defer observer attach until first update when els exist
   const originalUpdate = update
   function updateWithObservers() {
     ensureObservers()

@@ -51,7 +51,13 @@ export { injectBubbleStyles, SHADOW } from './styles'
 
 export { isPoint, resolveElement } from './resolveTarget'
 
-export { sameKeys, measureFrame, measureBox } from './measure'
+export {
+  sameKeys,
+  positioningFrameEl,
+  measureFrame,
+  measureFrameFrom,
+  measureBox,
+} from './measure'
 
 export { computeRoom, roomierSide, computeGeometry } from './geometry'
 export type { ComputeGeometryOptions } from './geometry'

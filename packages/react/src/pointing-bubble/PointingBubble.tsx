@@ -44,9 +44,8 @@ const emptyState: BubbleRenderState = {
   placement: 'none',
   tip: null,
   slotTip: null,
-  overlayStyle: {},
   boxStyle: {},
-  rootIsBox: true,
+  svgStyle: {},
   tail: null,
   boxFill: '',
   boxStroke: '',
@@ -77,7 +76,6 @@ export const PointingBubble = forwardRef(function PointingBubble(
   ref: Ref<PointingBubbleHandle>,
 ) {
   const rootRef = useRef<HTMLDivElement | null>(null)
-  const boxRef = useRef<HTMLDivElement | null>(null)
   const controllerRef = useRef<ReturnType<typeof createBubbleController> | null>(
     null,
   )
@@ -85,8 +83,7 @@ export const PointingBubble = forwardRef(function PointingBubble(
 
   if (!controllerRef.current) {
     controllerRef.current = createBubbleController({
-      getRootEl: () => rootRef.current,
-      getBoxEl: () => boxRef.current,
+      getBoxEl: () => rootRef.current,
       onChange: setState,
     })
   }
@@ -142,19 +139,14 @@ export const PointingBubble = forwardRef(function PointingBubble(
           </p>
         ))
 
-  const rootClass = [
-    'pointing-bubble',
-    !target ? 'pointing-bubble__inner' : '',
-    !target ? className : '',
-  ]
+  const rootClass = ['pointing-bubble', 'pointing-bubble__inner', className]
     .filter(Boolean)
     .join(' ')
 
-  const rootStyle = toCss(
-    state.rootIsBox
-      ? { ...state.boxStyle, ...(style as object) }
-      : state.overlayStyle,
-  )
+  const rootStyle = toCss({
+    ...state.boxStyle,
+    ...(style as object),
+  })
 
   return (
     <div
@@ -162,32 +154,11 @@ export const PointingBubble = forwardRef(function PointingBubble(
       className={rootClass}
       data-placement={state.placement}
       style={rootStyle}
-      {...(!target ? rest : {})}
+      {...rest}
     >
-      <div
-        ref={boxRef}
-        className={target ? ['pointing-bubble__inner', className].filter(Boolean).join(' ') : undefined}
-        style={
-          state.rootIsBox
-            ? { display: 'contents' }
-            : toCss({ ...state.boxStyle, ...(style as object) })
-        }
-        {...(target ? rest : {})}
-      >
-        {content}
-      </div>
+      {content}
       {target && state.tail ? (
-        <svg
-          className="pointing-bubble__svg"
-          style={{
-            position: 'absolute',
-            inset: 0,
-            width: '100%',
-            height: '100%',
-            overflow: 'visible',
-            zIndex: state.boxZIndex as CSSProperties['zIndex'],
-          }}
-        >
+        <svg className="pointing-bubble__svg" style={toCss(state.svgStyle)}>
           <path
             className="pointing-bubble__path"
             d={state.tail.fill}

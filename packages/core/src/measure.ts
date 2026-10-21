@@ -8,37 +8,52 @@ export function sameKeys(
   return Object.keys(a).every((k) => a[k] === b[k])
 }
 
-/** Measure root frame including ancestor CSS scale (e.g. Slidev). */
-export function measureFrame(root: HTMLElement): FrameRect {
-  const rootRect = root.getBoundingClientRect()
-  const rootStyle = getComputedStyle(root)
-  const width = parseFloat(rootStyle.width) || 0
-  const height = parseFloat(rootStyle.height) || 0
+/**
+ * Nearest positioned ancestor of `boxEl`, used as the tip/tail coordinate
+ * frame. Falls back to `document.documentElement`.
+ */
+export function positioningFrameEl(boxEl: HTMLElement): HTMLElement {
+  let el: HTMLElement | null = boxEl.parentElement
+  while (el) {
+    const pos = getComputedStyle(el).position
+    if (pos && pos !== 'static') return el
+    if (el === document.documentElement) break
+    el = el.parentElement
+  }
+  return document.documentElement
+}
+
+/** Measure a frame element including ancestor CSS scale (e.g. Slidev). */
+export function measureFrame(frameEl: HTMLElement): FrameRect {
+  const rect = frameEl.getBoundingClientRect()
+  const style = getComputedStyle(frameEl)
+  const width = parseFloat(style.width) || 0
+  const height = parseFloat(style.height) || 0
   return {
-    left: rootRect.left,
-    top: rootRect.top,
+    left: rect.left,
+    top: rect.top,
     width,
     height,
-    scaleX: width ? rootRect.width / width : 1,
-    scaleY: height ? rootRect.height / height : 1,
+    scaleX: width ? rect.width / width : 1,
+    scaleY: height ? rect.height / height : 1,
     viewportWidth: window.innerWidth,
     viewportHeight: window.innerHeight,
   }
 }
 
-export function measureBox(
-  boxEl: HTMLElement,
-  rootEl: HTMLElement,
-  frame: FrameRect,
-  manual: boolean,
-): BoxMeasure {
+/** Frame for tip/tail math: the bubble's positioning containing block. */
+export function measureFrameFrom(boxEl: HTMLElement): FrameRect {
+  return measureFrame(positioningFrameEl(boxEl))
+}
+
+/** Box size and top-left in frame-local coordinates. */
+export function measureBox(boxEl: HTMLElement, frame: FrameRect): BoxMeasure {
   const s = getComputedStyle(boxEl)
-  const { scaleX, scaleY } = frame
+  const { scaleX, scaleY, left, top } = frame
   const r = boxEl.getBoundingClientRect()
-  const rootRect = rootEl.getBoundingClientRect()
   return {
-    x: manual ? (r.left - rootRect.left) / scaleX : 0,
-    y: manual ? (r.top - rootRect.top) / scaleY : 0,
+    x: (r.left - left) / scaleX,
+    y: (r.top - top) / scaleY,
     width: r.width / scaleX,
     height: r.height / scaleY,
     fill: s.backgroundColor,

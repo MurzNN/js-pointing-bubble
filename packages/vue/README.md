@@ -48,20 +48,22 @@ const btn = ref<HTMLElement | null>(null)
 | Prop | Default | Notes |
 | --- | --- | --- |
 | `target` | `null` | `{x,y}`, `Element`, CSS selector, or `null` (in-flow box only) |
-| `placement` | `'auto'` | `'auto'` \| quadrant \| `'manual'` (CSS positions the box) |
+| `placement` | `'auto'` | `'auto'` \| quadrant \| `'manual'` (CSS / host positions the **root** box) |
 | `targetAnchor` | `'center'` | `'center'` \| `'edge'` for element targets |
 | `maxWidth` | — | Wrap width (px) unless CSS sets width/max-width |
 | `tailLength` | `45` | Tip → box offset (px) |
 | `tailBaseWidth` | `24` | Tail width at the box (px) |
 | `padding` | `8` | Via `--pb-padding` unless CSS sets padding |
-| `shadow` | `true` | Shared drop-shadow on overlay/box |
+| `shadow` | `true` | Drop-shadow on the root (includes the SVG tail) |
 | `transitionDuration` | `200` | Glide ms (`0` off; respects reduced motion) |
 
 Expose / ref: `update()` after non-reactive layout changes.
 
+The component root is always the bubble chrome. With a `target`, tip/tail use the nearest positioned ancestor as the frame. Free dragging / absolute CSS ⇒ `placement="manual"`.
+
 CSS hooks: `.pointing-bubble`, `.pointing-bubble__inner`, `.pointing-bubble__svg`, `.pointing-bubble__path`. Vars: `--pb-padding`, `--pb-max-width`, `--pb-width`.
 
-**Breaking (v0.2):** class prefix renamed from `.vue-pointing-bubble*` / `--vpb-*` to `.pointing-bubble*` / `--pb-*`.
+**Breaking:** root is always the box (no overlay wrapper). **Breaking (v0.2):** class prefix renamed from `.vue-pointing-bubble*` / `--vpb-*` to `.pointing-bubble*` / `--pb-*`.
 
 ## License
 
