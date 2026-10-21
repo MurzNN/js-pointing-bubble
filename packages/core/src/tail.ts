@@ -78,9 +78,9 @@ export function buildTailPaths(opts: BuildTailOptions): TailPaths | null {
   const attach = bw > 0 ? -bw / 2 : 0
   // Short stubs along the wall so the stroke meets the CSS border cleanly.
   const hook = 2
-  // Overlap past the content edge so fractional zoom / subpixel layout cannot
-  // open a 1px crack between box background and tail fill.
-  const cover = Math.max(2, bw) + 2
+  // Slight overlap past the inner border edge into the content (enough to hide
+  // a hairline seam, not a large red rectangle under the box fill).
+  const cover = 2
 
   const m1 = a - half
   const m2 = a + half
