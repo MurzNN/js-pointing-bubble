@@ -119,6 +119,8 @@ export function createBubbleController(
   let geometry: Geometry | null = null
   let easeHandle: EaseHandle | null = null
   let resizeObserver: ResizeObserver | null = null
+  let mutationObserver: MutationObserver | null = null
+  let observedBoxEl: HTMLElement | null = null
   let state: BubbleRenderState = emptyState(false)
 
   const emit = () => {
@@ -328,15 +330,35 @@ export function createBubbleController(
     window.addEventListener('scroll', onWindowUpdate, true)
   }
 
+  const originalUpdate = update
+
   function ensureObservers() {
-    if (typeof ResizeObserver === 'undefined') return
-    resizeObserver?.disconnect()
-    resizeObserver = new ResizeObserver(() => update())
     const boxEl = options.getBoxEl()
-    if (boxEl) resizeObserver.observe(boxEl)
+    if (boxEl === observedBoxEl) return
+    observedBoxEl = boxEl
+    resizeObserver?.disconnect()
+    mutationObserver?.disconnect()
+    resizeObserver = null
+    mutationObserver = null
+    if (!boxEl) return
+    // Size changes (content / border / padding).
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(() => originalUpdate())
+      resizeObserver.observe(boxEl)
+    }
+    // CSS position/transform changes (drag, v-drag, manual left/top).
+    // ResizeObserver does not fire for those; without this the SVG (a child of
+    // the box) moves with the element while tip math stays stale until the next
+    // explicit update.
+    if (typeof MutationObserver !== 'undefined') {
+      mutationObserver = new MutationObserver(() => originalUpdate())
+      mutationObserver.observe(boxEl, {
+        attributes: true,
+        attributeFilter: ['style'],
+      })
+    }
   }
 
-  const originalUpdate = update
   function updateWithObservers() {
     ensureObservers()
     originalUpdate()
@@ -353,6 +375,8 @@ export function createBubbleController(
     destroy() {
       easeHandle?.cancel()
       resizeObserver?.disconnect()
+      mutationObserver?.disconnect()
+      observedBoxEl = null
       if (typeof window !== 'undefined') {
         window.removeEventListener('resize', onWindowUpdate)
         window.removeEventListener('scroll', onWindowUpdate, true)
