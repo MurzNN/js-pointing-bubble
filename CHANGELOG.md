@@ -4,6 +4,15 @@ Notable changes to `vue-pointing-bubble` / `react-pointing-bubble` (and shared c
 The release script prepends a section per version from commits since the previous tag;
 GitHub Releases use the same notes.
 
+## [0.5.2] - 2026-10-22
+
+### Changes
+
+- test: target inline no-target bubble in e2e (48e3701)
+- chore: generate CHANGELOG from commits only (1151102)
+
+**Full changelog**: https://github.com/MurzNN/js-pointing-bubble/compare/v0.5.1...v0.5.2
+
 ## [0.5.1] - 2026-10-22
 
 ### Changes
