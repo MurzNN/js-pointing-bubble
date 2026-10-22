@@ -3,7 +3,10 @@ import { expect, test } from '@playwright/test'
 test.describe('vue-pointing-bubble playground', () => {
   test('renders inline bubble without target', async ({ page }) => {
     await page.goto('/')
-    const bubble = page.locator('.pointing-bubble').first()
+    // Do not use `.first()` — the thick-border demo (manual + target) is first in the page.
+    const bubble = page.locator('.pointing-bubble', {
+      hasText: 'A regular inline bubble with default styling',
+    })
     await expect(bubble).toBeVisible()
     await expect(bubble).toHaveAttribute('data-placement', 'none')
   })
