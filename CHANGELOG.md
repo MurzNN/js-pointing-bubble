@@ -5,11 +5,20 @@ The release script prepends a section per version; GitHub Releases use the same 
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-10-22
+
 ### Changes
 
 - perf: skip all tip/tail layout while the bubble is hidden (`opacity` / `display` / `visibility`)
 - perf: ignore non-layout style mutations (filter, `--pb-*`) so host drag / `v-drag` does not restart the tail
 - perf: skip recompute when frame, tip, target rect, and box measure are unchanged
+
+### Changes
+
+- perf: skip hidden layout and ignore non-layout style churn (d0048dc)
+- fix: disable pnpm cache in github-release job (984ae1b)
+
+**Full changelog**: https://github.com/MurzNN/js-pointing-bubble/compare/v0.5.0...v0.5.1
 
 ## [0.5.0] - 2026-10-21
 
