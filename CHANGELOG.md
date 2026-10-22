@@ -1,17 +1,10 @@
 # Changelog
 
 Notable changes to `vue-pointing-bubble` / `react-pointing-bubble` (and shared core).
-The release script prepends a section per version; GitHub Releases use the same notes.
-
-## [Unreleased]
+The release script prepends a section per version from commits since the previous tag;
+GitHub Releases use the same notes.
 
 ## [0.5.1] - 2026-10-22
-
-### Changes
-
-- perf: skip all tip/tail layout while the bubble is hidden (`opacity` / `display` / `visibility`)
-- perf: ignore non-layout style mutations (filter, `--pb-*`) so host drag / `v-drag` does not restart the tail
-- perf: skip recompute when frame, tip, target rect, and box measure are unchanged
 
 ### Changes
 

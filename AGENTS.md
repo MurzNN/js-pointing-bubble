@@ -36,7 +36,7 @@ PointingBubble (Vue / React shells) → props/lifecycle/refs/DOM only
 - npm Trusted Publishing (OIDC): `.github/workflows/publish.yml` on `v*` tags
 - Publishes `vue-pointing-bubble` + `react-pointing-bubble` only (not core)
 - Release: `pnpm release` (patch) / `pnpm release minor|major|x.y.z`
-- `CHANGELOG.md` is the in-repo changelog; put curated notes under `## [Unreleased]` (they fold into the next version). Breaking / migration notes belong there, not in the README.
+- `CHANGELOG.md` is generated on `pnpm release` from commit subjects since the previous `v*` tag — do not edit it by hand for routine work; write clear commit messages instead. Breaking / migration notes belong in commit messages (or the README), not a manual changelog draft.
 - GitHub Release notes match the version section in `CHANGELOG.md`: created by `release.mjs` after push, and idempotently by the `github-release` job in `publish.yml`
 
 ## Done checklist

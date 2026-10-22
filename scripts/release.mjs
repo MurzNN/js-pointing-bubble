@@ -11,9 +11,10 @@
  *   pnpm readme:packages      # regenerate package READMEs only
  *   node scripts/release.mjs --github-release   # create GH Release for current tag (CI)
  *
- * Each release folds `CHANGELOG.md` `[Unreleased]` notes plus commits since the
- * previous v* tag into a new version section, then creates a matching GitHub Release
- * (also via --github-release in CI).
+ * Each release prepends a CHANGELOG version section from commits since the
+ * previous v* tag (subjects + short hashes), then creates a matching GitHub
+ * Release (also via --github-release in CI). Do not edit CHANGELOG.md by hand
+ * for routine work — write clear commit messages instead.
  *
  * Package READMEs are extracted from the root README.md using HTML comments:
  *
@@ -41,9 +42,8 @@ const CHANGELOG_PATH = join(root, 'CHANGELOG.md')
 const DEFAULT_CHANGELOG = `# Changelog
 
 Notable changes to \`vue-pointing-bubble\` / \`react-pointing-bubble\` (and shared core).
-The release script prepends a section per version; GitHub Releases use the same notes.
-
-## [Unreleased]
+The release script prepends a section per version from commits since the previous tag;
+GitHub Releases use the same notes.
 
 `
 
@@ -410,17 +410,14 @@ function listCommitBullets(fromTag, toRef) {
 }
 
 /**
- * Fold curated `[Unreleased]` notes + commit bullets into release notes body
- * (no version heading — callers add that for CHANGELOG.md).
+ * Build release notes body (no version heading — callers add that for CHANGELOG.md).
+ * Always derived from commit subjects since the previous tag.
  */
-function composeReleaseNotes({ unreleasedBody, commitBullets, prevTag, tag }) {
+function composeReleaseNotes({ commitBullets, prevTag, tag }) {
   const parts = []
-  if (unreleasedBody.trim()) {
-    parts.push(unreleasedBody.trim())
-  }
   if (commitBullets.length) {
     parts.push(`### Changes\n\n${commitBullets.join('\n')}`)
-  } else if (!unreleasedBody.trim()) {
+  } else {
     parts.push('No notable commits since the previous release.')
   }
   if (prevTag && tag) {
@@ -458,11 +455,7 @@ function findSection(text, headingPattern) {
   return { start, end, body }
 }
 
-function takeUnreleasedBody(text) {
-  return findSection(text, 'Unreleased')?.body ?? ''
-}
-
-/** Remove a version/Unreleased section; returns text without that block. */
+/** Remove a version section; returns text without that block. */
 function removeSection(text, headingPattern) {
   const sec = findSection(text, headingPattern)
   if (!sec) return text
@@ -473,14 +466,13 @@ function removeSection(text, headingPattern) {
 
 /**
  * Build release notes and the next CHANGELOG.md contents for `version`.
- * Clears `[Unreleased]` after folding it into the new section.
+ * Notes come only from commits since `prevTag`. Strips a legacy
+ * `## [Unreleased]` section if one is still present.
  */
 function prepareChangelogRelease({ version, prevTag, toRef, tag, date }) {
   const current = readChangelogFile()
-  const unreleasedBody = takeUnreleasedBody(current)
   const commitBullets = listCommitBullets(prevTag, toRef)
   const notes = composeReleaseNotes({
-    unreleasedBody,
     commitBullets,
     prevTag,
     tag,
@@ -498,8 +490,6 @@ function prepareChangelogRelease({ version, prevTag, toRef, tag, date }) {
     introEnd === -1 ? '' : rest.slice(introEnd).replace(/^\n+/, '')
 
   const fileText = `${intro}
-## [Unreleased]
-
 ## [${version}] - ${date}
 
 ${notes}
@@ -508,7 +498,7 @@ ${older}`
     .replace(/\n{3,}/g, '\n\n')
     .replace(/\n+$/, '\n')
 
-  return { notes, fileText, unreleasedBody }
+  return { notes, fileText }
 }
 
 /** Body of `## [version]` in CHANGELOG.md, or null if missing. */
@@ -535,7 +525,6 @@ function runGitHubReleaseOnly() {
   const notes =
     fromFile ||
     composeReleaseNotes({
-      unreleasedBody: '',
       commitBullets: listCommitBullets(prevTag, tag),
       prevTag,
       tag,
