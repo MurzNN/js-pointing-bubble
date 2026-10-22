@@ -1,7 +1,7 @@
 # Changelog
 
 Notable changes to `vue-pointing-bubble` / `react-pointing-bubble` (and shared core).
-The release script prepends a section per version from commits since the previous tag;
+Each release prepends a section from commits since the previous tag;
 GitHub Releases use the same notes.
 
 ## [0.5.2] - 2026-10-22

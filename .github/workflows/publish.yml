@@ -2,10 +2,8 @@
 # The Trusted Publisher "Workflow filename" on npmjs.com must be exactly: publish.yml
 #
 # Release:
-#   1. pnpm release / pnpm release minor|major|x.y.z  (bumps, commits, tags, pushes)
-#   2. This workflow publishes to npm and creates a GitHub Release with a
-#      commit changelog since the previous v* tag (idempotent if the local
-#      release script already created the Release).
+#   1. pnpm release / pnpm release minor|major|x.y.z  (release-it: bumps, CHANGELOG, commit, tag, push, GH Release)
+#   2. This workflow publishes to npm; github-release job is an idempotent fallback.
 name: Publish packages
 
 on:
@@ -65,12 +63,9 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          # Need full history + tags to build the commit changelog.
           fetch-depth: 0
           fetch-tags: true
 
-      # No lockfile install here — only node + gh. Disable auto pnpm cache
-      # (setup-node would otherwise require pnpm from package.json packageManager).
       - uses: actions/setup-node@v5
         with:
           node-version: 22
@@ -80,4 +75,4 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REF_NAME: ${{ github.ref_name }}
-        run: node scripts/release.mjs --github-release
+        run: node scripts/github-release.mjs
