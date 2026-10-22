@@ -12,6 +12,10 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # Image tag must match the resolved @playwright/test version (see pnpm-lock.yaml).
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      options: --user 1001
     steps:
       - uses: actions/checkout@v5
 
@@ -24,9 +28,6 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
-
-      - name: Install Playwright Chromium
-        run: pnpm exec playwright install --with-deps chromium
 
       - run: pnpm typecheck
 
