@@ -5,6 +5,12 @@ The release script prepends a section per version; GitHub Releases use the same 
 
 ## [Unreleased]
 
+### Changes
+
+- perf: skip all tip/tail layout while the bubble is hidden (`opacity` / `display` / `visibility`)
+- perf: ignore non-layout style mutations (filter, `--pb-*`) so host drag / `v-drag` does not restart the tail
+- perf: skip recompute when frame, tip, target rect, and box measure are unchanged
+
 ## [0.5.0] - 2026-10-21
 
 ### Breaking

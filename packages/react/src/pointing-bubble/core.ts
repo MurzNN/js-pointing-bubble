@@ -37,7 +37,10 @@ export type { EaseHandle } from './ease'
 export { buildTailPaths } from './tail'
 export type { BuildTailOptions } from './tail'
 
-export { createBubbleController } from './createBubbleController'
+export {
+  createBubbleController,
+  isBubbleVisible,
+} from './createBubbleController'
 export type {
   BubbleRenderState,
   BubbleControllerOptions,

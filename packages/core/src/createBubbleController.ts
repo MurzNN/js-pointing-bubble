@@ -57,6 +57,21 @@ export interface BubbleController {
   destroy: () => void
 }
 
+/** Inline styles that move/resize the box (e.g. host drag / v-drag). */
+const LAYOUT_STYLE_PROPS = [
+  'left',
+  'top',
+  'right',
+  'bottom',
+  'width',
+  'height',
+  'transform',
+  'translate',
+  'inset',
+  'inset-inline',
+  'inset-block',
+] as const
+
 function emptyState(hasTarget: boolean): BubbleRenderState {
   return {
     hasTarget,
@@ -79,6 +94,20 @@ function pointEqual(a: Point | null, b: Point | null): boolean {
   return a.x === b.x && a.y === b.y
 }
 
+function geometryEqual(a: Geometry | null, b: Geometry | null): boolean {
+  if (a === b) return true
+  if (!a || !b) return false
+  return (
+    a.placement === b.placement &&
+    a.tx === b.tx &&
+    a.ty === b.ty &&
+    a.bx === b.bx &&
+    a.by === b.by &&
+    a.w === b.w &&
+    a.h === b.h
+  )
+}
+
 function renderStateEqual(a: BubbleRenderState, b: BubbleRenderState): boolean {
   return (
     a.hasTarget === b.hasTarget &&
@@ -94,6 +123,25 @@ function renderStateEqual(a: BubbleRenderState, b: BubbleRenderState): boolean {
     a.tail?.fill === b.tail?.fill &&
     a.tail?.stroke === b.tail?.stroke
   )
+}
+
+/** True when the bubble chrome is painted (not display/visibility/opacity hidden). */
+export function isBubbleVisible(el: HTMLElement): boolean {
+  if (typeof el.checkVisibility === 'function') {
+    return el.checkVisibility({
+      checkOpacity: true,
+      checkVisibilityCSS: true,
+    })
+  }
+  const s = getComputedStyle(el)
+  if (s.display === 'none' || s.visibility === 'hidden') return false
+  if (parseFloat(s.opacity) === 0) return false
+  return true
+}
+
+function layoutStyleSignature(el: HTMLElement): string {
+  const s = el.style
+  return LAYOUT_STYLE_PROPS.map((k) => s.getPropertyValue(k)).join('|')
 }
 
 export function createBubbleController(
@@ -122,6 +170,10 @@ export function createBubbleController(
   let mutationObserver: MutationObserver | null = null
   let observedBoxEl: HTMLElement | null = null
   let state: BubbleRenderState = emptyState(false)
+  /** Skip work while opacity/display hidden; refresh once when shown again. */
+  let suspended = false
+  /** Last layout-relevant inline style snapshot (avoids v-drag / self-style loops). */
+  let lastLayoutStyleSig = ''
 
   const emit = () => {
     const next = buildState()
@@ -223,12 +275,14 @@ export function createBubbleController(
 
   function recomputeGeometry() {
     if (!tip || !box) {
-      geometry = null
-      startEase(null)
+      if (geometry !== null || current !== null) {
+        geometry = null
+        startEase(null)
+      }
       return
     }
     const room = computeRoom(tip, frameRect, config.tailLength)
-    geometry = computeGeometry({
+    const next = computeGeometry({
       tip,
       box,
       frame: frameRect,
@@ -238,6 +292,9 @@ export function createBubbleController(
       room,
       tailLength: config.tailLength,
     })
+    // Target geometry unchanged — do not cancel/restart an in-flight ease.
+    if (geometryEqual(geometry, next)) return
+    geometry = next
     startEase(geometry)
   }
 
@@ -254,21 +311,43 @@ export function createBubbleController(
     )
   }
 
-  function measure(boxEl: HTMLElement) {
+  function measure(boxEl: HTMLElement): boolean {
     const next = measureBox(boxEl, frameRect)
     if (
-      !sameKeys(
+      sameKeys(
         next as unknown as Record<string, unknown>,
         box as unknown as Record<string, unknown> | null,
       )
     ) {
-      box = next
+      return false
     }
+    box = next
+    return true
   }
 
   function update() {
     const boxEl = options.getBoxEl()
-    if (config.target == null || !boxEl) {
+    if (!boxEl) {
+      tip = null
+      targetRect = null
+      box = null
+      geometry = null
+      current = null
+      suspended = false
+      emit()
+      return
+    }
+
+    // Hidden bubbles (e.g. Slidev v-click opacity:0) skip all layout work.
+    if (!isBubbleVisible(boxEl)) {
+      easeHandle?.cancel()
+      suspended = true
+      return
+    }
+    const wasSuspended = suspended
+    suspended = false
+
+    if (config.target == null) {
       tip = null
       targetRect = null
       box = null
@@ -278,7 +357,13 @@ export function createBubbleController(
       return
     }
 
+    const prevFrame = frameRect
     frameRect = measureFrameFrom(boxEl)
+    const frameChanged = !sameKeys(
+      frameRect as unknown as Record<string, unknown>,
+      prevFrame as unknown as Record<string, unknown>,
+    )
+
     // Prefer matching inside the positioning frame so short selectors like
     // `h1` / `p` resolve on the local stage (e.g. a Slidev slide), not the
     // first match in the whole document.
@@ -287,6 +372,10 @@ export function createBubbleController(
         ? positioningFrameEl(boxEl).querySelector(config.target) ??
           resolveElement(config.target)
         : resolveElement(config.target)
+
+    let tipChanged = false
+    let targetChanged = false
+
     if (el) {
       const r = el.getBoundingClientRect()
       const { scaleX, scaleY, left, top } = frameRect
@@ -296,31 +385,47 @@ export function createBubbleController(
         right: (r.right - left) / scaleX,
         bottom: (r.bottom - top) / scaleY,
       }
-      if (
-        !sameKeys(
-          rect as unknown as Record<string, unknown>,
-          targetRect as unknown as Record<string, unknown> | null,
-        )
-      ) {
-        targetRect = rect
-      }
-      tip = {
+      targetChanged = !sameKeys(
+        rect as unknown as Record<string, unknown>,
+        targetRect as unknown as Record<string, unknown> | null,
+      )
+      if (targetChanged) targetRect = rect
+      const nextTip: Point = {
         x: (rect.left + rect.right) / 2,
         y: (rect.top + rect.bottom) / 2,
       }
+      tipChanged = !pointEqual(tip, nextTip)
+      tip = nextTip
     } else if (isPoint(config.target)) {
+      targetChanged = targetRect != null
       targetRect = null
-      tip = { x: config.target.x, y: config.target.y }
+      const nextTip: Point = { x: config.target.x, y: config.target.y }
+      tipChanged = !pointEqual(tip, nextTip)
+      tip = nextTip
     } else {
-      targetRect = null
       tip = null
+      targetRect = null
       box = null
       geometry = null
       current = null
       emit()
       return
     }
-    measure(boxEl)
+
+    const boxChanged = measure(boxEl)
+    lastLayoutStyleSig = layoutStyleSignature(boxEl)
+
+    if (
+      !wasSuspended &&
+      !frameChanged &&
+      !tipChanged &&
+      !targetChanged &&
+      !boxChanged &&
+      current
+    ) {
+      return
+    }
+
     recomputeGeometry()
   }
 
@@ -334,6 +439,31 @@ export function createBubbleController(
   }
 
   const originalUpdate = update
+
+  function onBoxAttributeMutation(mutations: MutationRecord[]) {
+    const boxEl = options.getBoxEl()
+    if (!boxEl) return
+
+    const classOrHidden = mutations.some(
+      (m) => m.attributeName === 'class' || m.attributeName === 'hidden',
+    )
+    if (classOrHidden) {
+      if (!isBubbleVisible(boxEl)) {
+        easeHandle?.cancel()
+        suspended = true
+        return
+      }
+      originalUpdate()
+      return
+    }
+
+    // Style-only: ignore chrome writes (filter, --pb-*, pointer-events) that
+    // do not move/resize the box — those collide with host drag / v-drag.
+    const sig = layoutStyleSignature(boxEl)
+    if (sig === lastLayoutStyleSig) return
+    lastLayoutStyleSig = sig
+    originalUpdate()
+  }
 
   function ensureObservers() {
     const boxEl = options.getBoxEl()
@@ -349,15 +479,15 @@ export function createBubbleController(
       resizeObserver = new ResizeObserver(() => originalUpdate())
       resizeObserver.observe(boxEl)
     }
-    // CSS position/transform changes (drag, v-drag, manual left/top).
+    // Position/transform (drag, v-drag) + class/hidden for visibility resume.
     // ResizeObserver does not fire for those; without this the SVG (a child of
     // the box) moves with the element while tip math stays stale until the next
     // explicit update.
     if (typeof MutationObserver !== 'undefined') {
-      mutationObserver = new MutationObserver(() => originalUpdate())
+      mutationObserver = new MutationObserver(onBoxAttributeMutation)
       mutationObserver.observe(boxEl, {
         attributes: true,
-        attributeFilter: ['style'],
+        attributeFilter: ['style', 'class', 'hidden'],
       })
     }
   }
