@@ -35,9 +35,13 @@ PointingBubble (Vue / React shells) → props/lifecycle/refs/DOM only
 
 - npm Trusted Publishing (OIDC): `.github/workflows/publish.yml` on `v*` tags
 - Publishes `vue-pointing-bubble` + `react-pointing-bubble` only (not core)
-- Release: `pnpm release` (patch) / `pnpm release minor|major|x.y.z`
-- `CHANGELOG.md` is generated on `pnpm release` from commit subjects since the previous `v*` tag — do not edit it by hand for routine work; write clear commit messages instead. Breaking / migration notes belong in commit messages (or the README), not a manual changelog draft.
-- GitHub Release notes match the version section in `CHANGELOG.md`: created by `release.mjs` after push, and idempotently by the `github-release` job in `publish.yml`
+- Trusted Publisher workflow filename on npmjs.com must match: `publish.yml`
+- Release: `pnpm release` (patch) / `pnpm release minor|major|x.y.z` — [release-it](https://github.com/release-it/release-it) bumps both adapters, regenerates package READMEs, prepends `CHANGELOG.md`, commits, tags `vX.Y.Z`, pushes, creates a GitHub Release
+- `CHANGELOG.md` is generated on release from commit subjects since the previous `v*` tag — do not edit it by hand for routine work; write clear commit messages instead. Breaking / migration notes belong in commit messages (or the README), not a manual changelog draft.
+- GitHub Release notes match the version section in `CHANGELOG.md` (release-it + idempotent `github-release` job in `publish.yml`)
+- `pnpm readme:packages` — regenerate `packages/{vue,react}/README.md` only
+- Root `README.md` markers: visible `<!-- pkg:all|omit -->` regions; hidden package-only `<!-- pkg:vue|react|core … -->` comment blocks (body must not contain `-->`)
+- Shared templates/scripts: https://github.com/MurzNN/js-cross-framework-tooling
 
 ## Done checklist
 
