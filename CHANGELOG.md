@@ -4,6 +4,14 @@ Notable changes to `vue-pointing-bubble` / `react-pointing-bubble` (and shared c
 The release script prepends a section per version from commits since the previous tag;
 GitHub Releases use the same notes.
 
+## [0.6.0] - 2026-10-27
+
+### Changes
+
+- fix: export PointingBubble only, drop the plugin and Callout alias (125da16)
+
+**Full changelog**: https://github.com/MurzNN/js-pointing-bubble/compare/v0.5.2...v0.6.0
+
 ## [0.5.2] - 2026-10-22
 
 ### Changes
