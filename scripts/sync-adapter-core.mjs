@@ -82,8 +82,7 @@ export type {
 const adapters = [
   {
     dir: join(root, 'packages/vue/src/pointing-bubble'),
-    index: `import type { App, Plugin } from 'vue'
-import PointingBubble from './PointingBubble.vue'
+    index: `import PointingBubble from './PointingBubble.vue'
 
 export type {
   Placement,
@@ -106,20 +105,7 @@ export {
 } from './core'
 
 export { PointingBubble }
-export { PointingBubble as Callout }
 export { PointingBubble as default }
-
-export interface PointingBubblePluginOptions {
-  name?: string
-}
-
-export const PointingBubblePlugin: Plugin = {
-  install(app: App, options: PointingBubblePluginOptions = {}) {
-    const name = options.name ?? 'PointingBubble'
-    app.component(name, PointingBubble)
-    app.component('Callout', PointingBubble)
-  },
-}
 `,
   },
   {
@@ -149,7 +135,6 @@ export type {
   PointingBubbleProps,
   PointingBubbleHandle,
 } from './PointingBubble'
-export { PointingBubble as Callout } from './PointingBubble'
 export { PointingBubble as default } from './PointingBubble'
 `,
   },

@@ -1,6 +1,5 @@
 export {
   PointingBubble,
-  PointingBubble as Callout,
   PointingBubble as default,
   type PointingBubbleProps,
   type PointingBubbleHandle,

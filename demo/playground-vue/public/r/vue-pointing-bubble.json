@@ -16,7 +16,7 @@
     },
     {
       "path": "packages/vue/src/pointing-bubble/index.ts",
-      "content": "import type { App, Plugin } from 'vue'\nimport PointingBubble from './PointingBubble.vue'\n\nexport type {\n  Placement,\n  ResolvedPlacement,\n  TargetAnchor,\n  Point,\n  BubbleTarget,\n  BubbleConfig,\n  BubbleController,\n  BubbleRenderState,\n} from './core'\n\nexport {\n  DEFAULT_BUBBLE_CONFIG,\n  createBubbleController,\n  resolveElement,\n  isPoint,\n  computeGeometry,\n  buildTailPaths,\n} from './core'\n\nexport { PointingBubble }\nexport { PointingBubble as Callout }\nexport { PointingBubble as default }\n\nexport interface PointingBubblePluginOptions {\n  name?: string\n}\n\nexport const PointingBubblePlugin: Plugin = {\n  install(app: App, options: PointingBubblePluginOptions = {}) {\n    const name = options.name ?? 'PointingBubble'\n    app.component(name, PointingBubble)\n    app.component('Callout', PointingBubble)\n  },\n}\n",
+      "content": "import PointingBubble from './PointingBubble.vue'\n\nexport type {\n  Placement,\n  ResolvedPlacement,\n  TargetAnchor,\n  Point,\n  BubbleTarget,\n  BubbleConfig,\n  BubbleController,\n  BubbleRenderState,\n} from './core'\n\nexport {\n  DEFAULT_BUBBLE_CONFIG,\n  createBubbleController,\n  resolveElement,\n  isPoint,\n  computeGeometry,\n  buildTailPaths,\n} from './core'\n\nexport { PointingBubble }\nexport { PointingBubble as default }\n",
       "type": "registry:ui"
     },
     {

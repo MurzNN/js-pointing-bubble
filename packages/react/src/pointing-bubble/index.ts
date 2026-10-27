@@ -23,5 +23,4 @@ export type {
   PointingBubbleProps,
   PointingBubbleHandle,
 } from './PointingBubble'
-export { PointingBubble as Callout } from './PointingBubble'
 export { PointingBubble as default } from './PointingBubble'

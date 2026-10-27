@@ -1,9 +1,6 @@
 export {
   PointingBubble,
-  PointingBubble as Callout,
   PointingBubble as default,
-  PointingBubblePlugin,
-  type PointingBubblePluginOptions,
 } from './pointing-bubble'
 
 export type {
