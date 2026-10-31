@@ -23,6 +23,18 @@ export function positioningFrameEl(boxEl: HTMLElement): HTMLElement {
   return document.documentElement
 }
 
+// getBoundingClientRect() omits CSS zoom in Chromium, so include each ancestor's zoom.
+export function effectiveZoom(el: Element): number {
+  let zoom = 1
+  let current: Element | null = el
+  while (current) {
+    const value = Number.parseFloat(getComputedStyle(current).zoom)
+    if (Number.isFinite(value) && value > 0) zoom *= value
+    current = current.parentElement
+  }
+  return zoom
+}
+
 /** Measure a frame element including ancestor CSS scale (e.g. Slidev). */
 export function measureFrame(frameEl: HTMLElement): FrameRect {
   const rect = frameEl.getBoundingClientRect()
@@ -47,13 +59,18 @@ export function measureFrameFrom(boxEl: HTMLElement): FrameRect {
 }
 
 /** Box size and top-left in frame-local coordinates. */
-export function measureBox(boxEl: HTMLElement, frame: FrameRect): BoxMeasure {
+export function measureBox(
+  boxEl: HTMLElement,
+  frame: FrameRect,
+  boxZoom = 1,
+  frameZoom = 1,
+): BoxMeasure {
   const s = getComputedStyle(boxEl)
   const { scaleX, scaleY, left, top } = frame
   const r = boxEl.getBoundingClientRect()
   return {
-    x: (r.left - left) / scaleX,
-    y: (r.top - top) / scaleY,
+    x: (r.left * boxZoom - left * frameZoom) / (scaleX * boxZoom),
+    y: (r.top * boxZoom - top * frameZoom) / (scaleY * boxZoom),
     width: r.width / scaleX,
     height: r.height / scaleY,
     fill: s.backgroundColor,

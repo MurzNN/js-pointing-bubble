@@ -138,37 +138,6 @@ onBeforeUnmount(() => window.removeEventListener('resize', placeRightLabel))
       </p>
     </header>
 
-    <section class="demo" id="thick-border">
-      <h2>Thick border / tail seam</h2>
-      <p class="hint">
-        Repro for thick CSS borders. The box keeps its normal CSS border; the SVG is only
-        an open wedge (hooks on the inner edge of the border, then straight edges to the tip).
-      </p>
-      <div class="thick-border-stage">
-        <span id="thick-border-target" class="thick-border-target">target</span>
-        <PointingBubble
-          target="#thick-border-target"
-          placement="manual"
-          target-anchor="center"
-          style="
-            position: absolute;
-            left: 24px;
-            top: 36px;
-            width: 220px;
-            padding: 12px 14px;
-            border: 12px solid #6b7280;
-            border-radius: 10px;
-            background: #fff;
-          "
-          :tail-base-width="28"
-          :tail-length="40"
-        >
-          <p class="bubble-title">Thick 12px border</p>
-          <p class="bubble-text">Tail should meet the box with no seam across the mouth.</p>
-        </PointingBubble>
-      </div>
-    </section>
-
     <section class="demo">
       <h2>Static and hover hints<span id="hints-title" style="margin-left: 8px" /></h2>
       <p class="hint">
@@ -238,6 +207,48 @@ onBeforeUnmount(() => window.removeEventListener('resize', placeRightLabel))
         <p class="bubble-title">{{ hint.label }}</p>
         <p class="bubble-text">{{ hint.text }}</p>
       </PointingBubble>
+    </section>
+
+    <section class="demo">
+      <h2>Target inside CSS zoom</h2>
+      <p class="hint">
+        The target is rendered at 70% zoom while the bubble stays at normal scale.
+        Its tail still lands on the target center, even with a thick border.
+      </p>
+      <div class="zoom-stage">
+        <div class="zoomed-content">
+          <button id="zoom-target" class="btn primary">Zoomed target</button>
+        </div>
+        <PointingBubble
+          id="zoom-bubble"
+          v-slot="{ tip }"
+          target="#zoom-target"
+          placement="manual"
+          style="
+            position: absolute;
+            left: 24px;
+            top: 68px;
+            width: 220px;
+            padding: 12px 14px;
+            border: 12px solid #6b7280;
+            border-radius: 10px;
+            background: #fff;
+          "
+          target-anchor="center"
+          :tail-base-width="28"
+          :tail-length="26"
+        >
+          <p class="bubble-title">Thick border callout</p>
+          <p
+            class="bubble-text"
+            data-zoom-tip
+            :data-tip-x="tip?.x"
+            :data-tip-y="tip?.y"
+          >
+            Tip: {{ tip ? `${Math.round(tip.x)}, ${Math.round(tip.y)}` : 'measuring…' }}
+          </p>
+        </PointingBubble>
+      </div>
     </section>
 
     <section class="demo">

@@ -165,4 +165,5 @@ describe('createBubbleController', () => {
 
     controller.destroy()
   })
+
 })
