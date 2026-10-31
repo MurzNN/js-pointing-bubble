@@ -4,6 +4,17 @@ Notable changes to `vue-pointing-bubble` / `react-pointing-bubble` (and shared c
 Each release prepends a section from commits since the previous tag;
 GitHub Releases use the same notes.
 
+## [0.6.1] - 2026-10-31
+
+### Changes
+
+- fix: align bubbles inside CSS-zoomed content (3daaf9f)
+- fix: disable npm plugin in release-it; bumper writes all package.json versions (e48b62a)
+- chore: adopt release-it and shared cross-framework tooling (e2f3943)
+- ci: run tests in Playwright Docker container (4610912)
+
+**Full changelog**: https://github.com/MurzNN/js-pointing-bubble/compare/v0.6.0...v0.6.1
+
 ## [0.6.0] - 2026-10-27
 
 ### Changes
