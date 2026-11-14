@@ -1,7 +1,6 @@
 import { easeGeometry, type EaseHandle } from './ease'
 import { computeGeometry, computeRoom, roomierSide } from './geometry'
 import {
-  effectiveZoom,
   measureBox,
   measureFrameFrom,
   positioningFrameEl,
@@ -164,7 +163,6 @@ export function createBubbleController(
     viewportWidth: 0,
     viewportHeight: 0,
   }
-  let layoutFrameRect: FrameRect = { ...frameRect }
   let current: Geometry | null = null
   let geometry: Geometry | null = null
   let easeHandle: EaseHandle | null = null
@@ -219,7 +217,7 @@ export function createBubbleController(
           margin: '0',
         })
         if (config.maxWidth == null && tip) {
-          const room = computeRoom(tip, layoutFrameRect, config.tailLength)
+          const room = computeRoom(tip, frameRect, config.tailLength)
           const placed = geometry?.placement ?? config.placement
           const side =
             placed === 'auto'
@@ -244,7 +242,7 @@ export function createBubbleController(
         : null
 
     let svgStyle: StyleMap = {}
-    if (tail && current && layoutFrameRect.width && layoutFrameRect.height) {
+    if (tail && current && frameRect.width && frameRect.height) {
       // left/top are relative to the padding edge; bx/by are border-box.
       const padX = box?.borderLeft ?? 0
       const padY = box?.borderTop ?? 0
@@ -252,8 +250,8 @@ export function createBubbleController(
         position: 'absolute',
         left: `${-current.bx - padX}px`,
         top: `${-current.by - padY}px`,
-        width: `${layoutFrameRect.width}px`,
-        height: `${layoutFrameRect.height}px`,
+        width: `${frameRect.width}px`,
+        height: `${frameRect.height}px`,
         overflow: 'visible',
         pointerEvents: 'none',
         zIndex: box?.zIndex ?? 'auto',
@@ -283,11 +281,11 @@ export function createBubbleController(
       }
       return
     }
-    const room = computeRoom(tip, layoutFrameRect, config.tailLength)
+    const room = computeRoom(tip, frameRect, config.tailLength)
     const next = computeGeometry({
       tip,
       box,
-      frame: layoutFrameRect,
+      frame: frameRect,
       placement: config.placement,
       targetAnchor: config.targetAnchor,
       targetRect,
@@ -313,12 +311,8 @@ export function createBubbleController(
     )
   }
 
-  function measure(
-    boxEl: HTMLElement,
-    boxZoom: number,
-    frameZoom: number,
-  ): boolean {
-    const next = measureBox(boxEl, frameRect, boxZoom, frameZoom)
+  function measure(boxEl: HTMLElement): boolean {
+    const next = measureBox(boxEl, frameRect)
     if (
       sameKeys(
         next as unknown as Record<string, unknown>,
@@ -363,22 +357,10 @@ export function createBubbleController(
       return
     }
 
-    const prevFrame = layoutFrameRect
+    const prevFrame = frameRect
     frameRect = measureFrameFrom(boxEl)
-    const positioningFrame = positioningFrameEl(boxEl)
-    const frameZoom = effectiveZoom(positioningFrame)
-    const boxZoom = effectiveZoom(boxEl)
-    layoutFrameRect = {
-      ...frameRect,
-      left: frameRect.left * frameZoom,
-      top: frameRect.top * frameZoom,
-      width: (frameRect.width * frameZoom) / boxZoom,
-      height: (frameRect.height * frameZoom) / boxZoom,
-      scaleX: frameRect.scaleX * boxZoom,
-      scaleY: frameRect.scaleY * boxZoom,
-    }
     const frameChanged = !sameKeys(
-      layoutFrameRect as unknown as Record<string, unknown>,
+      frameRect as unknown as Record<string, unknown>,
       prevFrame as unknown as Record<string, unknown>,
     )
 
@@ -387,7 +369,7 @@ export function createBubbleController(
     // first match in the whole document.
     const el =
       typeof config.target === 'string'
-        ? positioningFrame.querySelector(config.target) ??
+        ? positioningFrameEl(boxEl).querySelector(config.target) ??
           resolveElement(config.target)
         : resolveElement(config.target)
 
@@ -396,13 +378,12 @@ export function createBubbleController(
 
     if (el) {
       const r = el.getBoundingClientRect()
-      const targetZoom = effectiveZoom(el)
       const { scaleX, scaleY, left, top } = frameRect
       const rect: LocalRect = {
-        left: (r.left * targetZoom - left * frameZoom) / (scaleX * boxZoom),
-        top: (r.top * targetZoom - top * frameZoom) / (scaleY * boxZoom),
-        right: (r.right * targetZoom - left * frameZoom) / (scaleX * boxZoom),
-        bottom: (r.bottom * targetZoom - top * frameZoom) / (scaleY * boxZoom),
+        left: (r.left - left) / scaleX,
+        top: (r.top - top) / scaleY,
+        right: (r.right - left) / scaleX,
+        bottom: (r.bottom - top) / scaleY,
       }
       targetChanged = !sameKeys(
         rect as unknown as Record<string, unknown>,
@@ -431,7 +412,7 @@ export function createBubbleController(
       return
     }
 
-    const boxChanged = measure(boxEl, boxZoom, frameZoom)
+    const boxChanged = measure(boxEl)
     lastLayoutStyleSig = layoutStyleSignature(boxEl)
 
     if (
