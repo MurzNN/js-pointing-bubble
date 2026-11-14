@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   createBubbleController,
+  hasOpacityFadeIn,
   isBubbleVisible,
+  PERF_ATTR_LAYOUT_CHANGES_ONLY,
+  PERF_ATTR_SLIDEV_TRANSITIONS,
 } from '../src/createBubbleController'
 
 function stubRect(
@@ -162,6 +165,188 @@ describe('createBubbleController', () => {
     controller.update()
     expect(onChange).toHaveBeenCalled()
     expect(controller.getState().placement).toBe('manual')
+
+    controller.destroy()
+  })
+
+  it('draws the tail once an opacity fade-in leaves 0', () => {
+    const stage = document.createElement('div')
+    stage.style.cssText = 'position:relative;width:400px;height:300px'
+    const target = document.createElement('button')
+    const box = document.createElement('div')
+    box.style.cssText = 'position:absolute;left:200px;top:180px;width:120px'
+    stage.append(target, box)
+    document.body.appendChild(stage)
+
+    stubRect(stage, { left: 0, top: 0, width: 400, height: 300 })
+    stubRect(target, { left: 20, top: 20, width: 40, height: 20 })
+    stubRect(box, { left: 200, top: 180, width: 120, height: 40 })
+
+    let visible = false
+    box.checkVisibility = () => visible
+    const fade = {
+      playState: 'running',
+      transitionProperty: 'opacity',
+      effect: {
+        getKeyframes: () => [{ opacity: '0' }, { opacity: '1' }],
+      },
+    }
+    box.getAnimations = () =>
+      (visible ? [] : [fade]) as unknown as Animation[]
+    box.setAttribute(PERF_ATTR_SLIDEV_TRANSITIONS, '1')
+
+    const queued: FrameRequestCallback[] = []
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+      queued.push(cb)
+      return queued.length
+    })
+    vi.stubGlobal('cancelAnimationFrame', () => {})
+
+    const controller = createBubbleController({
+      getBoxEl: () => box,
+    })
+    controller.setConfig({
+      target,
+      placement: 'manual',
+      transitionDuration: 0,
+    })
+
+    expect(controller.getState().tail).toBeNull()
+    expect(queued).toHaveLength(1)
+
+    // First frame of the fade is still fully transparent.
+    queued[0]!(0)
+    expect(controller.getState().tail).toBeNull()
+    expect(queued).toHaveLength(2)
+
+    visible = true
+    queued[1]!(0)
+    expect(controller.getState().placement).toBe('manual')
+    expect(controller.getState().tail?.fill).toBeTruthy()
+
+    controller.destroy()
+    vi.unstubAllGlobals()
+  })
+
+  it('does not retry while a hidden bubble has no fade-in', () => {
+    const stage = document.createElement('div')
+    stage.style.cssText = 'position:relative;width:400px;height:300px'
+    const target = document.createElement('button')
+    const box = document.createElement('div')
+    stage.append(target, box)
+    document.body.appendChild(stage)
+
+    box.checkVisibility = () => false
+    box.getAnimations = () => []
+    const raf = vi.fn()
+    vi.stubGlobal('requestAnimationFrame', raf)
+
+    const controller = createBubbleController({
+      getBoxEl: () => box,
+    })
+    controller.setConfig({
+      target,
+      placement: 'manual',
+      transitionDuration: 0,
+    })
+
+    expect(raf).not.toHaveBeenCalled()
+    expect(hasOpacityFadeIn(box)).toBe(false)
+    expect(controller.getState().tail).toBeNull()
+
+    controller.destroy()
+    vi.unstubAllGlobals()
+  })
+
+  it('does not follow an opacity fade-in unless slidev-transitions=1', () => {
+    const stage = document.createElement('div')
+    stage.style.cssText = 'position:relative;width:400px;height:300px'
+    const target = document.createElement('button')
+    const box = document.createElement('div')
+    stage.append(target, box)
+    document.body.appendChild(stage)
+
+    box.checkVisibility = () => false
+    box.getAnimations = () =>
+      [
+        {
+          playState: 'running',
+          transitionProperty: 'opacity',
+          effect: {
+            getKeyframes: () => [{ opacity: '0' }, { opacity: '1' }],
+          },
+        },
+      ] as unknown as Animation[]
+    const raf = vi.fn()
+    vi.stubGlobal('requestAnimationFrame', raf)
+
+    const controller = createBubbleController({
+      getBoxEl: () => box,
+    })
+    controller.setConfig({
+      target,
+      placement: 'manual',
+      transitionDuration: 0,
+    })
+
+    expect(hasOpacityFadeIn(box)).toBe(true)
+    expect(raf).not.toHaveBeenCalled()
+
+    controller.destroy()
+    vi.unstubAllGlobals()
+  })
+
+  it('recalculates on any style write unless layout-changes-only=1', async () => {
+    const stage = document.createElement('div')
+    stage.style.cssText = 'position:relative;width:400px;height:300px'
+    const target = document.createElement('button')
+    const box = document.createElement('div')
+    box.style.cssText = 'position:absolute;left:200px;top:180px;width:120px'
+    stage.append(target, box)
+    document.body.appendChild(stage)
+
+    stubRect(stage, { left: 0, top: 0, width: 400, height: 300 })
+    stubRect(target, { left: 20, top: 20, width: 40, height: 20 })
+    const boxRect = vi.fn(
+      () =>
+        ({
+          left: 200,
+          top: 180,
+          right: 320,
+          bottom: 220,
+          width: 120,
+          height: 40,
+          x: 200,
+          y: 180,
+          toJSON() {},
+        }) as DOMRect,
+    )
+    box.getBoundingClientRect = boxRect
+    box.checkVisibility = () => true
+
+    const controller = createBubbleController({
+      getBoxEl: () => box,
+    })
+    controller.setConfig({
+      target,
+      placement: 'manual',
+      transitionDuration: 0,
+    })
+
+    const afterSetup = boxRect.mock.calls.length
+    box.style.filter = 'blur(1px)'
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(boxRect.mock.calls.length).toBeGreaterThan(afterSetup)
+
+    box.setAttribute(PERF_ATTR_LAYOUT_CHANGES_ONLY, '1')
+    const afterFlag = boxRect.mock.calls.length
+    box.style.filter = 'blur(2px)'
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(boxRect.mock.calls.length).toBe(afterFlag)
+
+    box.style.left = '10px'
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(boxRect.mock.calls.length).toBeGreaterThan(afterFlag)
 
     controller.destroy()
   })

@@ -63,6 +63,28 @@ The component root is always the bubble chrome (`.pointing-bubble` + `.pointing-
 
 CSS hooks: `.pointing-bubble`, `.pointing-bubble__inner`, `.pointing-bubble__svg`, `.pointing-bubble__path`. Vars: `--pb-padding`, `--pb-max-width`, `--pb-width`.
 
+### Performance
+
+Both attributes are off unless you set them on the bubble element. Turn one on only when that cost is worth it.
+
+| Attribute | Off (default) | On (`="1"`) |
+| --- | --- | --- |
+| `slidev-transitions` | A CSS opacity fade (Slidev `v-click`) is ignored while opacity is still 0, so the tail is not drawn on the first reveal. No animation-frame polling. | Follow the fade and measure again as soon as opacity is above 0. Polls `requestAnimationFrame` only while that fade-in is running. |
+| `layout-changes-only` | Every `style` change recalculates the tail. | Recalculate only when the box moves or resizes: `left`, `top`, `right`, `bottom`, `width`, `height`, `transform`, `translate`, `inset`, `inset-inline`, `inset-block`. Other style writes (filter, CSS variables, pointer-events) are ignored. |
+
+```vue
+<PointingBubble
+  slidev-transitions="1"
+  layout-changes-only="1"
+  target=".anchor"
+  placement="manual"
+>
+  …
+</PointingBubble>
+```
+
+`true`, `yes`, and a boolean attribute with an empty value also turn an option on.
+
 ## License
 
 MIT

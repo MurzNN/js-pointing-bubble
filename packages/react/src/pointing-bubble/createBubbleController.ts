@@ -139,9 +139,80 @@ export function isBubbleVisible(el: HTMLElement): boolean {
   return true
 }
 
+/**
+ * Opacity target of a running CSS transition, when the animation changes
+ * opacity. Returns null for other animations.
+ */
+function opacityTransitionTarget(anim: Animation): number | null {
+  if (anim.playState !== 'running') return null
+  const prop = (anim as Animation & { transitionProperty?: string })
+    .transitionProperty
+  if (prop != null && prop !== 'opacity' && prop !== 'all') return null
+  const effect = anim.effect
+  if (
+    !effect ||
+    typeof (effect as KeyframeEffect).getKeyframes !== 'function'
+  ) {
+    return null
+  }
+  const last = (effect as KeyframeEffect).getKeyframes().at(-1)
+  if (!last || last.opacity == null || last.opacity === '') return null
+  const target =
+    typeof last.opacity === 'number'
+      ? last.opacity
+      : Number.parseFloat(last.opacity)
+  return Number.isFinite(target) ? target : null
+}
+
+/**
+ * True while a CSS opacity transition is running toward a visible value.
+ * Slidev `v-click` fades with `transition: all`, so the class change that
+ * reveals a bubble still reports opacity 0 (and `checkVisibility` is false)
+ * until a later frame. The controller retries layout while this is true.
+ *
+ * @param el Bubble chrome element.
+ * @returns Whether an opacity fade-in is currently running.
+ */
+export function hasOpacityFadeIn(el: HTMLElement): boolean {
+  if (typeof el.getAnimations !== 'function') return false
+  return el.getAnimations().some((anim) => {
+    const target = opacityTransitionTarget(anim)
+    return target != null && target > 0
+  })
+}
+
 function layoutStyleSignature(el: HTMLElement): string {
   const s = el.style
   return LAYOUT_STYLE_PROPS.map((k) => s.getPropertyValue(k)).join('|')
+}
+
+/** Follow a CSS opacity fade-in (Slidev `v-click`) and measure when it becomes visible. */
+export const PERF_ATTR_SLIDEV_TRANSITIONS = 'slidev-transitions'
+
+/**
+ * Recalculate only when layout properties change (`left`, `top`, `width`,
+ * `height`, `transform`, and the other move/resize props).
+ */
+export const PERF_ATTR_LAYOUT_CHANGES_ONLY = 'layout-changes-only'
+
+/**
+ * Opt-in performance switch read from the bubble element.
+ * Set `slidev-transitions="1"` or `layout-changes-only="1"`.
+ *
+ * @param el Bubble chrome element.
+ * @param name Attribute name (`slidev-transitions` or `layout-changes-only`).
+ * @returns Whether the attribute is `1`, `true`, `yes`, or present with an empty value.
+ */
+export function perfFlag(el: HTMLElement, name: string): boolean {
+  const value = el.getAttribute(name)
+  if (value == null) return false
+  const normalized = value.trim().toLowerCase()
+  return (
+    normalized === '' ||
+    normalized === '1' ||
+    normalized === 'true' ||
+    normalized === 'yes'
+  )
 }
 
 export function createBubbleController(
@@ -174,6 +245,9 @@ export function createBubbleController(
   let suspended = false
   /** Last layout-relevant inline style snapshot (avoids v-drag / self-style loops). */
   let lastLayoutStyleSig = ''
+  /** rAF retry while a v-click opacity fade-in is still at 0. */
+  let fadeInRetry: number | null = null
+  let destroyed = false
 
   const emit = () => {
     const next = buildState()
@@ -325,6 +399,41 @@ export function createBubbleController(
     return true
   }
 
+  function cancelFadeInRetry() {
+    if (fadeInRetry != null && typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(fadeInRetry)
+    }
+    fadeInRetry = null
+  }
+
+  /**
+   * Slidev removes `slidev-vclick-hidden` while computed opacity is still 0,
+   * so the visibility check bails and the tail is never drawn. Follow the
+   * fade until opacity is non-zero, then measure.
+   */
+  function scheduleFadeInRetry() {
+    if (fadeInRetry != null || typeof requestAnimationFrame !== 'function')
+      return
+    // 0.1s–0.3s click fades, plus slack for a long `transition: all`.
+    const maxFrames = 90
+    let frames = 0
+    const step = () => {
+      fadeInRetry = null
+      if (destroyed) return
+      const boxEl = options.getBoxEl()
+      if (!boxEl) return
+      if (isBubbleVisible(boxEl)) {
+        update()
+        return
+      }
+      frames += 1
+      if (frames < maxFrames && hasOpacityFadeIn(boxEl)) {
+        fadeInRetry = requestAnimationFrame(step)
+      }
+    }
+    fadeInRetry = requestAnimationFrame(step)
+  }
+
   function update() {
     const boxEl = options.getBoxEl()
     if (!boxEl) {
@@ -334,16 +443,27 @@ export function createBubbleController(
       geometry = null
       current = null
       suspended = false
+      cancelFadeInRetry()
       emit()
       return
     }
 
     // Hidden bubbles (e.g. Slidev v-click opacity:0) skip all layout work.
+    // Fade-in retries are opt-in: they poll animation frames until opacity > 0.
     if (!isBubbleVisible(boxEl)) {
       easeHandle?.cancel()
       suspended = true
+      if (
+        perfFlag(boxEl, PERF_ATTR_SLIDEV_TRANSITIONS) &&
+        hasOpacityFadeIn(boxEl)
+      ) {
+        scheduleFadeInRetry()
+      } else {
+        cancelFadeInRetry()
+      }
       return
     }
+    cancelFadeInRetry()
     const wasSuspended = suspended
     suspended = false
 
@@ -415,7 +535,10 @@ export function createBubbleController(
     const boxChanged = measure(boxEl)
     lastLayoutStyleSig = layoutStyleSignature(boxEl)
 
+    // Off by default. With `layout-changes-only="1"`, skip geometry when
+    // the frame, tip, target, and box are unchanged.
     if (
+      perfFlag(boxEl, PERF_ATTR_LAYOUT_CHANGES_ONLY) &&
       !wasSuspended &&
       !frameChanged &&
       !tipChanged &&
@@ -448,20 +571,17 @@ export function createBubbleController(
       (m) => m.attributeName === 'class' || m.attributeName === 'hidden',
     )
     if (classOrHidden) {
-      if (!isBubbleVisible(boxEl)) {
-        easeHandle?.cancel()
-        suspended = true
-        return
-      }
       originalUpdate()
       return
     }
 
-    // Style-only: ignore chrome writes (filter, --pb-*, pointer-events) that
-    // do not move/resize the box — those collide with host drag / v-drag.
-    const sig = layoutStyleSignature(boxEl)
-    if (sig === lastLayoutStyleSig) return
-    lastLayoutStyleSig = sig
+    // Off by default. With `layout-changes-only="1"`, ignore chrome writes
+    // (filter, --pb-*, pointer-events) that do not move or resize the box.
+    if (perfFlag(boxEl, PERF_ATTR_LAYOUT_CHANGES_ONLY)) {
+      const sig = layoutStyleSignature(boxEl)
+      if (sig === lastLayoutStyleSig) return
+      lastLayoutStyleSig = sig
+    }
     originalUpdate()
   }
 
@@ -506,6 +626,8 @@ export function createBubbleController(
     getConfig: () => config,
     getState: () => state,
     destroy() {
+      destroyed = true
+      cancelFadeInRetry()
       easeHandle?.cancel()
       resizeObserver?.disconnect()
       mutationObserver?.disconnect()
