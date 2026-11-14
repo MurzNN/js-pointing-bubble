@@ -4,6 +4,14 @@ Notable changes to `vue-pointing-bubble` / `react-pointing-bubble` (and shared c
 Each release prepends a section from commits since the previous tag;
 GitHub Releases use the same notes.
 
+## [0.6.3] - 2026-11-14
+
+### Changes
+
+- fix: draw the tail after an opacity fade when opted in (d2ce107)
+
+**Full changelog**: https://github.com/MurzNN/js-pointing-bubble/compare/v0.6.2...v0.6.3
+
 ## [0.6.2] - 2026-11-14
 
 ### Changes
