@@ -186,21 +186,19 @@ function layoutStyleSignature(el: HTMLElement): string {
   return LAYOUT_STYLE_PROPS.map((k) => s.getPropertyValue(k)).join('|')
 }
 
-/** Follow a CSS opacity fade-in (Slidev `v-click`) and measure when it becomes visible. */
-export const PERF_ATTR_SLIDEV_TRANSITIONS = 'slidev-transitions'
-
 /**
- * Recalculate only when layout properties change (`left`, `top`, `width`,
- * `height`, `transform`, and the other move/resize props).
+ * Opt-out for the default follow-up work. With `layout-changes-only="1"`:
+ * style writes recalculate only when the box moves or resizes, and a CSS
+ * opacity fade-in is not polled on animation frames.
  */
 export const PERF_ATTR_LAYOUT_CHANGES_ONLY = 'layout-changes-only'
 
 /**
- * Opt-in performance switch read from the bubble element.
- * Set `slidev-transitions="1"` or `layout-changes-only="1"`.
+ * Whether the performance opt-out is set on the bubble element.
+ * Set `layout-changes-only="1"`.
  *
  * @param el Bubble chrome element.
- * @param name Attribute name (`slidev-transitions` or `layout-changes-only`).
+ * @param name Attribute name (`layout-changes-only`).
  * @returns Whether the attribute is `1`, `true`, `yes`, or present with an empty value.
  */
 export function perfFlag(el: HTMLElement, name: string): boolean {
@@ -449,12 +447,13 @@ export function createBubbleController(
     }
 
     // Hidden bubbles (e.g. Slidev v-click opacity:0) skip all layout work.
-    // Fade-in retries are opt-in: they poll animation frames until opacity > 0.
+    // By default, follow an opacity fade-in until the bubble is visible.
+    // `layout-changes-only="1"` turns that polling off.
     if (!isBubbleVisible(boxEl)) {
       easeHandle?.cancel()
       suspended = true
       if (
-        perfFlag(boxEl, PERF_ATTR_SLIDEV_TRANSITIONS) &&
+        !perfFlag(boxEl, PERF_ATTR_LAYOUT_CHANGES_ONLY) &&
         hasOpacityFadeIn(boxEl)
       ) {
         scheduleFadeInRetry()

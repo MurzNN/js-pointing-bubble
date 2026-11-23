@@ -4,7 +4,6 @@ import {
   hasOpacityFadeIn,
   isBubbleVisible,
   PERF_ATTR_LAYOUT_CHANGES_ONLY,
-  PERF_ATTR_SLIDEV_TRANSITIONS,
 } from '../src/createBubbleController'
 
 function stubRect(
@@ -193,7 +192,6 @@ describe('createBubbleController', () => {
     }
     box.getAnimations = () =>
       (visible ? [] : [fade]) as unknown as Animation[]
-    box.setAttribute(PERF_ATTR_SLIDEV_TRANSITIONS, '1')
 
     const queued: FrameRequestCallback[] = []
     vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
@@ -258,7 +256,7 @@ describe('createBubbleController', () => {
     vi.unstubAllGlobals()
   })
 
-  it('does not follow an opacity fade-in unless slidev-transitions=1', () => {
+  it('does not follow an opacity fade-in when layout-changes-only=1', () => {
     const stage = document.createElement('div')
     stage.style.cssText = 'position:relative;width:400px;height:300px'
     const target = document.createElement('button')
@@ -267,6 +265,7 @@ describe('createBubbleController', () => {
     document.body.appendChild(stage)
 
     box.checkVisibility = () => false
+    box.setAttribute(PERF_ATTR_LAYOUT_CHANGES_ONLY, '1')
     box.getAnimations = () =>
       [
         {

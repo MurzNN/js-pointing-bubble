@@ -143,25 +143,20 @@ CSS hooks: `.pointing-bubble`, `.pointing-bubble__inner`, `.pointing-bubble__svg
 
 ### Performance
 
-Both attributes are off unless you set them on the bubble element. Turn one on only when that cost is worth it.
+By default the bubble follows a CSS opacity fade (Slidev `v-click`) and measures again as soon as opacity is above 0, and every `style` change recalculates the tail. The fade follow polls `requestAnimationFrame` only while that fade-in is running.
 
-| Attribute | Off (default) | On (`="1"`) |
-| --- | --- | --- |
-| `slidev-transitions` | A CSS opacity fade (Slidev `v-click`) is ignored while opacity is still 0, so the tail is not drawn on the first reveal. No animation-frame polling. | Follow the fade and measure again as soon as opacity is above 0. Polls `requestAnimationFrame` only while that fade-in is running. |
-| `layout-changes-only` | Every `style` change recalculates the tail. | Recalculate only when the box moves or resizes: `left`, `top`, `right`, `bottom`, `width`, `height`, `transform`, `translate`, `inset`, `inset-inline`, `inset-block`. Other style writes (filter, CSS variables, pointer-events) are ignored. |
+Set `layout-changes-only="1"` to turn both of those off:
+
+- Do not poll animation frames during an opacity fade. A bubble that is still at opacity 0 is left unmeasured, so the tail can be missing on the first reveal.
+- Recalculate only when the box moves or resizes: `left`, `top`, `right`, `bottom`, `width`, `height`, `transform`, `translate`, `inset`, `inset-inline`, `inset-block`. Other style writes (filter, CSS variables, pointer-events) are ignored.
 
 ```vue
-<PointingBubble
-  slidev-transitions="1"
-  layout-changes-only="1"
-  target=".anchor"
-  placement="manual"
->
+<PointingBubble layout-changes-only="1" target=".anchor" placement="manual">
   …
 </PointingBubble>
 ```
 
-`true`, `yes`, and a boolean attribute with an empty value also turn an option on.
+`true`, `yes`, and a boolean attribute with an empty value also turn the opt-out on.
 <!-- /pkg:all -->
 
 ## Demos
